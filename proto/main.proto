@@ -1,0 +1,117 @@
+syntax = "proto3";
+
+option go_package = "github.com/wanliqun/cgo-game-server/proto";
+
+enum Sex {
+  MALE = 0;
+  FEMALE = 1;
+}
+
+enum Culture {
+  AMERICAN = 0;
+  ARGENTINIAN = 1;
+  AUSTRALIAN = 2;
+  BRAZILIAN = 3;
+  BRITISH = 4;
+  BULGARIAN = 5;
+  CANADIAN = 6; 
+  CHINESE = 7;
+  DANISH = 8;
+  FINNISH = 9;
+  FRENCH = 10;
+  GERMAN = 11;
+  KAZAKH = 12;
+  MEXICAN = 13;
+  NORWEGIAN = 14;
+  POLISH = 15;
+  PORTUGUESE = 16;
+  RUSSIAN = 17;
+  SPANISH = 18;
+  SWEDISH = 19;
+  TURKISH = 20;
+  UKRAINIAN = 21;
+}
+
+enum StatusCode {
+  OK = 0;
+  UNKNOWN_ERROR = 1;
+  INVALID_PARAMETER = 2;
+  RESOURCE_NOT_FOUND = 3;
+  PERMISSION_DENIED = 4;
+}
+
+// The message type enum
+enum MessageType {
+  INFO = 0; // INFO command
+  LOGIN = 1; // LOGIN command
+  LOGOUT = 2; // LOGOUT command
+  GENERATE_RANDOM_NICKNAME = 3; // GENERATE_RANDOM_NICKNAME command
+}
+
+// Define the main request and response messages
+
+message LoginRequest {
+  optional string username = 1;
+  optional string password = 2;
+}
+
+message LoginResponse { }
+
+message LogoutRequest {}
+
+message LogoutResponse { }
+
+message InfoRequest {}
+
+message InfoResponse {
+  optional string server_name = 1; // server name
+  optional int32 num_online_players = 2; // number of online players
+  optional int32 max_player_capacity = 3; // max player capacity
+  optional int32 max_connection_capacity = 4; // max connection capacity
+  map<string, string> metrics = 5; // metrics status as key-value pairs
+}
+
+message GenerateRandomNicknameRequest {
+  optional Sex sex = 1; // Sex
+  optional Culture culture = 2; // Culture
+}
+
+message GenerateRandomNicknameResponse {
+  optional string nickname = 1; // Nickname
+}
+
+// Message for encapsulating different request types
+message Request {
+  MessageType type = 1;
+  oneof body {
+    InfoRequest info = 2;
+    LoginRequest login = 3;
+    LogoutRequest logout = 4;
+    GenerateRandomNicknameRequest generate_random_nickname = 5;
+  }
+}
+
+// Message for conveying response status information
+message Status {
+  StatusCode code = 1; // Status code
+  optional string message = 2; // Descriptive message
+}
+
+// Message for encapsulating different response types
+message Response {
+  MessageType type = 1;
+  oneof body {
+    Status status = 2;
+    InfoResponse info = 3;
+    LoginResponse login = 4;
+    LogoutResponse logout = 5;
+    GenerateRandomNicknameResponse generate_random_nickname = 6;
+  }
+}
+
+message Message {
+  oneof body {
+    Request request = 1;
+    Response response = 2;
+  }
+}
