@@ -3,18 +3,39 @@ package server
 import (
 	"net"
 	"sync"
+	"sync/atomic"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 const (
 	timeoutCheckInterval = time.Second
 	timeOutDuration      = time.Second * 30
+
+	CtxKeySession ContextKey = "session"
 )
 
 type Session struct {
-	ID         string    // Session ID
-	Conn       net.Conn  // Underlying network connection
-	LastActive time.Time // Last active time
+	ID         string   // Session ID
+	Conn       net.Conn // Underlying network connection
+	lastActive int64    // Last active timestamp
+}
+
+func NewSession(conn net.Conn) *Session {
+	return &Session{
+		ID:         uuid.NewString(),
+		Conn:       conn,
+		lastActive: time.Now().Unix(),
+	}
+}
+
+func (s *Session) Refresh() {
+	atomic.StoreInt64(&s.lastActive, time.Now().Unix())
+}
+
+func (s *Session) LastActive() time.Time {
+	return time.Unix(atomic.LoadInt64(&s.lastActive), 0)
 }
 
 func (s *Session) Close() {
@@ -53,6 +74,13 @@ func (m *SessionManager) Remove(sess *Session) bool {
 	}
 
 	return false
+}
+
+func (m *SessionManager) Clear() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.sessions = make(map[string]*Session)
 }
 
 func (m *SessionManager) CloseAll() {
@@ -95,7 +123,7 @@ func (m *SessionManager) Stop() {
 func (m *SessionManager) checkTimeout() {
 	for _, s := range m.all() {
 		// Check if the connection has been inactive for longer than the timeout duration.
-		if time.Since(s.LastActive) < timeOutDuration {
+		if time.Since(s.LastActive()) < timeOutDuration {
 			continue
 		}
 
