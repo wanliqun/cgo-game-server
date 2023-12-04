@@ -3,6 +3,7 @@ package service
 import (
 	"sync"
 
+	"github.com/badu/bus"
 	"github.com/wanliqun/cgo-game-server/server"
 )
 
@@ -18,10 +19,13 @@ type PlayerService struct {
 }
 
 func NewPlayerService() *PlayerService {
-	return &PlayerService{
+	ps := &PlayerService{
 		usrPlayers:  make(map[string]*Player),
 		sessPlayers: make(map[string]*Player),
 	}
+	bus.Sub(ps.OnSessionTerminatedEvent)
+
+	return ps
 }
 
 func (s *PlayerService) Add(p *Player) {
@@ -52,4 +56,10 @@ func (s *PlayerService) GetBySession(sessionID string) *Player {
 	defer s.mu.Unlock()
 
 	return s.sessPlayers[sessionID]
+}
+
+func (s *PlayerService) OnSessionTerminatedEvent(e *server.SessionTerminatedEvent) {
+	if player := s.GetBySession(e.Sess.ID); player != nil {
+		s.Remove(player)
+	}
 }

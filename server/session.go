@@ -6,6 +6,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/badu/bus"
 	"github.com/google/uuid"
 )
 
@@ -130,7 +131,8 @@ func (m *SessionManager) checkTimeout() {
 		if m.Remove(s) {
 			s.Close()
 
-			// TODO: publish session terminated event
+			// Publish session terminated event
+			bus.Pub(&SessionTerminatedEvent{Sess: s})
 		}
 	}
 }
