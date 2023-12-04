@@ -7,6 +7,7 @@ require (
 	github.com/go-faker/faker/v4 v4.2.0
 	github.com/google/uuid v1.4.0
 	github.com/pkg/errors v0.9.1
+	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475
 	github.com/sirupsen/logrus v1.9.3
 	github.com/xtaci/kcp-go/v5 v5.6.5
 	google.golang.org/protobuf v1.31.0

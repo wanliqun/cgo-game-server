@@ -51,8 +51,8 @@ enum MessageType {
 // Define the main request and response messages
 
 message LoginRequest {
-  optional string username = 1;
-  optional string password = 2;
+  string username = 1;
+  string password = 2;
 }
 
 message LoginResponse { }
@@ -64,54 +64,56 @@ message LogoutResponse { }
 message InfoRequest {}
 
 message InfoResponse {
-  optional string server_name = 1; // server name
-  optional int32 num_online_players = 2; // number of online players
-  optional int32 max_player_capacity = 3; // max player capacity
-  optional int32 max_connection_capacity = 4; // max connection capacity
-  map<string, string> metrics = 5; // metrics status as key-value pairs
+  string server_name = 1; // server name
+  int32 online_players = 2; // number of online players
+  int32 tpc_connections = 3; // number of TCP connections
+  int32 udp_connections = 4; // number of UDP connections
+  int32 max_player_capacity = 5; // max player capacity
+  int32 max_connection_capacity = 6; // max connection capacity
+  map<string, string> metrics = 7; // metrics status as key-value pairs
 }
 
 message GenerateRandomNicknameRequest {
-  optional Sex sex = 1; // Sex
-  optional Culture culture = 2; // Culture
+  Sex sex = 1; // Sex
+  Culture culture = 2; // Culture
 }
 
 message GenerateRandomNicknameResponse {
-  optional string nickname = 1; // Nickname
+  string nickname = 1; // Nickname
 }
 
 // Message for encapsulating different request types
 message Request {
-  MessageType type = 1;
   oneof body {
-    InfoRequest info = 2;
-    LoginRequest login = 3;
-    LogoutRequest logout = 4;
-    GenerateRandomNicknameRequest generate_random_nickname = 5;
+    InfoRequest info = 1;
+    LoginRequest login = 2;
+    LogoutRequest logout = 3;
+    GenerateRandomNicknameRequest generate_random_nickname = 4;
   }
 }
 
 // Message for conveying response status information
 message Status {
   StatusCode code = 1; // Status code
-  optional string message = 2; // Descriptive message
+  string message = 2; // Descriptive message
 }
 
 // Message for encapsulating different response types
 message Response {
-  MessageType type = 1;
   oneof body {
-    Status status = 2;
-    InfoResponse info = 3;
-    LoginResponse login = 4;
-    LogoutResponse logout = 5;
-    GenerateRandomNicknameResponse generate_random_nickname = 6;
+    Status status = 1;
+    InfoResponse info = 2;
+    LoginResponse login = 3;
+    LogoutResponse logout = 4;
+    GenerateRandomNicknameResponse generate_random_nickname = 5;
   }
 }
 
+// Message for encapsulating protocol message
 message Message {
+  MessageType type = 1;
   oneof body {
-    Request request = 1;
-    Response response = 2;
+    Request request = 2;
+    Response response = 3;
   }
 }
