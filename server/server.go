@@ -8,11 +8,12 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/wanliqun/cgo-game-server/proto"
 	"github.com/xtaci/kcp-go/v5"
+	pbprotol "google.golang.org/protobuf/proto"
 )
 
 type ContextKey string
 
-type HandlerFunc func(context.Context, *proto.Message) *proto.Message
+type HandlerFunc func(context.Context, pbprotol.Message) pbprotol.Message
 
 type Server struct {
 	listener   net.Listener
@@ -85,10 +86,8 @@ func (s *Server) handleConnection(conn net.Conn) {
 	logger.Debug("Client connection established")
 
 	session := NewSession(conn)
-	defer session.Close()
-
 	s.sessionMgr.Add(session)
-	defer s.sessionMgr.Remove(session)
+	defer s.sessionMgr.Terminate(session)
 
 	for {
 		msg, err := s.codec.Decode(conn)
@@ -116,9 +115,7 @@ func (s *Server) handleConnection(conn net.Conn) {
 func (s *Server) Stop() error {
 	defer func() {
 		s.listener = nil
-
-		s.sessionMgr.CloseAll()
-		s.sessionMgr.Clear()
+		s.sessionMgr.TerminateAll()
 	}()
 
 	return s.listener.Close()

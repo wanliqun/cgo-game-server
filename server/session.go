@@ -65,11 +65,12 @@ func (m *SessionManager) Add(sess *Session) {
 	m.sessions[sess.ID] = sess
 }
 
-func (m *SessionManager) Remove(sess *Session) bool {
+func (m *SessionManager) Terminate(sess *Session) bool {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	if _, ok := m.sessions[sess.ID]; ok {
+	if s, ok := m.sessions[sess.ID]; ok {
+		s.Close()
 		delete(m.sessions, sess.ID)
 		return true
 	}
@@ -77,17 +78,18 @@ func (m *SessionManager) Remove(sess *Session) bool {
 	return false
 }
 
-func (m *SessionManager) Clear() {
+func (m *SessionManager) TerminateAll() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	m.sessions = make(map[string]*Session)
+	for _, s := range m.sessions {
+		s.Close()
+		delete(m.sessions, s.ID)
+	}
 }
 
-func (m *SessionManager) CloseAll() {
-	for _, s := range m.all() {
-		s.Close()
-	}
+func (m *SessionManager) ListAll() []*Session {
+	return m.all()
 }
 
 func (m *SessionManager) all() (res []*Session) {
@@ -123,14 +125,9 @@ func (m *SessionManager) Stop() {
 
 func (m *SessionManager) checkTimeout() {
 	for _, s := range m.all() {
-		// Check if the connection has been inactive for longer than the timeout duration.
-		if time.Since(s.LastActive()) < timeOutDuration {
-			continue
-		}
-
-		if m.Remove(s) {
-			s.Close()
-
+		// Check if the session has been inactive for longer than the timeout duration.
+		if time.Since(s.LastActive()) >= timeOutDuration {
+			m.Terminate(s)
 			// Publish session terminated event
 			bus.Pub(&SessionTerminatedEvent{Sess: s})
 		}
