@@ -1,0 +1,14 @@
+# # Server configurations
+# server:
+#   serverName: cgo_game_server
+# 	serverPassword: helloworld
+# 	tcpEndpoint: ":8765"
+#   udpEndpoint: ":8765"
+# 	maxPlayerCapacity: 10000
+# 	maxConnectionCapacity: 15000
+
+# # Logs configurations
+# log:
+#   # Available levels are `trace`, `debug`, `info`, `error` and `fatal` 
+#   level: info
+#   forceColor: false
