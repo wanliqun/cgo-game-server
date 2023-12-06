@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/wanliqun/cgo-game-server/config"
 	"github.com/wanliqun/cgo-game-server/proto"
 	"github.com/wanliqun/cgo-game-server/server"
 	"github.com/wanliqun/cgo-game-server/service"
@@ -13,6 +14,7 @@ import (
 var (
 	_ Command = (*LoginCommand)(nil)
 	_ Command = (*LogoutCommand)(nil)
+	_ Command = (*InfoCommand)(nil)
 )
 
 type Command interface {
@@ -44,4 +46,27 @@ func (cmd *LogoutCommand) Execute(ctx context.Context) (pbprotol.Message, error)
 	cmd.playerService.Kickoff(player)
 
 	return nil, nil
+}
+
+type InfoCommand struct {
+	infoService *service.InfoService
+}
+
+func (cmd *InfoCommand) Execute(ctx context.Context) (pbprotol.Message, error) {
+	srvCfg := config.Shared().Server
+	srvStat := cmd.infoService.CollectServerStatus()
+	rateMetrics := cmd.infoService.GatherRPCRateMetrics()
+
+	resp := &proto.InfoResponse{
+		ServerName:            srvCfg.ServerName,
+		MaxPlayerCapacity:     int32(srvCfg.MaxPlayerCapacity),
+		MaxConnectionCapacity: int32(srvCfg.MaxConnectionCapacity),
+
+		Metrics:        rateMetrics,
+		OnlinePlayers:  int32(srvStat.NumOnlinePlayers),
+		TcpConnections: int32(srvStat.NumTCPConnections),
+		UdpConnections: int32(srvStat.NumUDPConnections),
+	}
+
+	return resp, nil
 }
