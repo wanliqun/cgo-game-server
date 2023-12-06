@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/wanliqun/cgo-game-server/config"
+	"github.com/wanliqun/cgo-game-server/game/common"
 	"github.com/wanliqun/cgo-game-server/proto"
 	"github.com/wanliqun/cgo-game-server/server"
 	"github.com/wanliqun/cgo-game-server/service"
@@ -15,6 +16,7 @@ var (
 	_ Command = (*LoginCommand)(nil)
 	_ Command = (*LogoutCommand)(nil)
 	_ Command = (*InfoCommand)(nil)
+	_ Command = (*GenerateRandomNicknameCommand)(nil)
 )
 
 type Command interface {
@@ -69,4 +71,14 @@ func (cmd *InfoCommand) Execute(ctx context.Context) (pbprotol.Message, error) {
 	}
 
 	return resp, nil
+}
+
+type GenerateRandomNicknameCommand struct {
+	request           *proto.GenerateRandomNicknameRequest
+	monickerGenerator common.MonickerGenerator
+}
+
+func (cmd *GenerateRandomNicknameCommand) Execute(ctx context.Context) (pbprotol.Message, error) {
+	nickname := cmd.monickerGenerator.Generate(cmd.request.Sex, cmd.request.Culture)
+	return &proto.GenerateRandomNicknameResponse{Nickname: nickname}, nil
 }
