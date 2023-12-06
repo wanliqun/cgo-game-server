@@ -66,7 +66,7 @@ message InfoRequest {}
 message InfoResponse {
   string server_name = 1; // server name
   int32 online_players = 2; // number of online players
-  int32 tpc_connections = 3; // number of TCP connections
+  int32 tcp_connections = 3; // number of TCP connections
   int32 udp_connections = 4; // number of UDP connections
   int32 max_player_capacity = 5; // max player capacity
   int32 max_connection_capacity = 6; // max connection capacity
