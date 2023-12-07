@@ -1,9 +1,11 @@
 package service
 
 import (
+	"errors"
 	"sync"
 
 	"github.com/badu/bus"
+	"github.com/wanliqun/cgo-game-server/config"
 	"github.com/wanliqun/cgo-game-server/proto"
 	"github.com/wanliqun/cgo-game-server/server"
 )
@@ -68,7 +70,9 @@ func (s *PlayerService) GetBySession(sessionID string) *Player {
 }
 
 func (s *PlayerService) Login(req *proto.LoginRequest, session *server.Session) (*Player, error) {
-	// TODO check password with the configured server password.
+	if req.Password != config.Shared().Server.Password {
+		return nil, errors.New("wrong password")
+	}
 
 	player := s.GetByUser(req.Username)
 

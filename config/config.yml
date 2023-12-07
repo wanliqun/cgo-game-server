@@ -1,7 +1,7 @@
 # # Server configurations
 # server:
-#   serverName: cgo_game_server
-# 	serverPassword: helloworld
+# 	name: cgo_game_server
+# 	password: helloworld
 # 	tcpEndpoint: ":8765"
 #   udpEndpoint: ":8765"
 # 	maxPlayerCapacity: 10000

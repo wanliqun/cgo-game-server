@@ -26,8 +26,8 @@ type logConfig struct {
 }
 
 type serverConfig struct {
-	ServerName            string `default:"cgo_game_server"`
-	ServerPassword        string `default:"helloworld"`
+	Name                  string `default:"cgo_game_server"`
+	Password              string `default:"helloworld"`
 	TCPEndpoint           string `default:":8765"`
 	UDPEndpoint           string `default:":8765"`
 	MaxPlayerCapacity     int    `default:"10000"`

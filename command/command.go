@@ -75,7 +75,7 @@ func (cmd *InfoCommand) Execute(ctx context.Context) (pbprotol.Message, error) {
 	rateMetrics := cmd.axService.GatherRPCRateMetrics()
 
 	resp := &proto.InfoResponse{
-		ServerName:            srvCfg.ServerName,
+		ServerName:            srvCfg.Name,
 		MaxPlayerCapacity:     int32(srvCfg.MaxPlayerCapacity),
 		MaxConnectionCapacity: int32(srvCfg.MaxConnectionCapacity),
 
