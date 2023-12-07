@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	gometrics "github.com/rcrowley/go-metrics"
+	"github.com/wanliqun/cgo-game-server/game/common"
 	"github.com/wanliqun/cgo-game-server/metrics"
 )
 
@@ -13,9 +14,15 @@ type ServerStatus struct {
 	NumUDPConnections int64
 }
 
-type InfoService struct{}
+type AuxiliaryService struct {
+	common.MonickerGenerator
+}
 
-func (s *InfoService) CollectServerStatus() *ServerStatus {
+func NewAuxiliaryService(generator common.MonickerGenerator) *AuxiliaryService {
+	return &AuxiliaryService{MonickerGenerator: generator}
+}
+
+func (s *AuxiliaryService) CollectServerStatus() *ServerStatus {
 	return &ServerStatus{
 		NumOnlinePlayers:  metrics.Server.OnlinePlayers().Value(),
 		NumTCPConnections: metrics.Server.TCPConnections().Value(),
@@ -23,7 +30,7 @@ func (s *InfoService) CollectServerStatus() *ServerStatus {
 	}
 }
 
-func (s *InfoService) GatherRPCRateMetrics() map[string]string {
+func (s *AuxiliaryService) GatherRPCRateMetrics() map[string]string {
 	rpcRateMetrics := make(map[string]string)
 	metrics.RPC.IterateRateTimers(func(key string, t gometrics.Timer) {
 		// Samples count

@@ -24,8 +24,9 @@ type PlayerService struct {
 	sessionMgr  *server.SessionManager
 }
 
-func NewPlayerService() *PlayerService {
+func NewPlayerService(sessionMgr *server.SessionManager) *PlayerService {
 	ps := &PlayerService{
+		sessionMgr:  sessionMgr,
 		usrPlayers:  make(map[string]*Player),
 		sessPlayers: make(map[string]*Player),
 	}

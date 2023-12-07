@@ -5,7 +5,6 @@ import (
 	"errors"
 
 	"github.com/wanliqun/cgo-game-server/config"
-	"github.com/wanliqun/cgo-game-server/game/common"
 	"github.com/wanliqun/cgo-game-server/proto"
 	"github.com/wanliqun/cgo-game-server/server"
 	"github.com/wanliqun/cgo-game-server/service"
@@ -28,6 +27,14 @@ type LoginCommand struct {
 	playerService *service.PlayerService
 }
 
+func NewLoginCommand(
+	reqeuest *proto.LoginRequest, playerService *service.PlayerService) *LoginCommand {
+	return &LoginCommand{
+		reqeuest:      reqeuest,
+		playerService: playerService,
+	}
+}
+
 func (cmd *LoginCommand) Execute(ctx context.Context) (pbprotol.Message, error) {
 	session := ctx.Value(server.CtxKeySession).(*server.Session)
 	_, err := cmd.playerService.Login(cmd.reqeuest, session)
@@ -36,6 +43,10 @@ func (cmd *LoginCommand) Execute(ctx context.Context) (pbprotol.Message, error) 
 
 type LogoutCommand struct {
 	playerService *service.PlayerService
+}
+
+func NewLogoutCommand(playerService *service.PlayerService) *LogoutCommand {
+	return &LogoutCommand{playerService: playerService}
 }
 
 func (cmd *LogoutCommand) Execute(ctx context.Context) (pbprotol.Message, error) {
@@ -51,13 +62,17 @@ func (cmd *LogoutCommand) Execute(ctx context.Context) (pbprotol.Message, error)
 }
 
 type InfoCommand struct {
-	infoService *service.InfoService
+	axService *service.AuxiliaryService
+}
+
+func NewInfoCommand(axService *service.AuxiliaryService) *InfoCommand {
+	return &InfoCommand{axService: axService}
 }
 
 func (cmd *InfoCommand) Execute(ctx context.Context) (pbprotol.Message, error) {
 	srvCfg := config.Shared().Server
-	srvStat := cmd.infoService.CollectServerStatus()
-	rateMetrics := cmd.infoService.GatherRPCRateMetrics()
+	srvStat := cmd.axService.CollectServerStatus()
+	rateMetrics := cmd.axService.GatherRPCRateMetrics()
 
 	resp := &proto.InfoResponse{
 		ServerName:            srvCfg.ServerName,
@@ -74,11 +89,20 @@ func (cmd *InfoCommand) Execute(ctx context.Context) (pbprotol.Message, error) {
 }
 
 type GenerateRandomNicknameCommand struct {
-	request           *proto.GenerateRandomNicknameRequest
-	monickerGenerator common.MonickerGenerator
+	request   *proto.GenerateRandomNicknameRequest
+	axService *service.AuxiliaryService
+}
+
+func NewGenerateRandomNicknameCommand(
+	request *proto.GenerateRandomNicknameRequest,
+	axService *service.AuxiliaryService) *GenerateRandomNicknameCommand {
+	return &GenerateRandomNicknameCommand{
+		request:   request,
+		axService: axService,
+	}
 }
 
 func (cmd *GenerateRandomNicknameCommand) Execute(ctx context.Context) (pbprotol.Message, error) {
-	nickname := cmd.monickerGenerator.Generate(cmd.request.Sex, cmd.request.Culture)
+	nickname := cmd.axService.Generate(cmd.request.Sex, cmd.request.Culture)
 	return &proto.GenerateRandomNicknameResponse{Nickname: nickname}, nil
 }
