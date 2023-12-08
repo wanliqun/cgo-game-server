@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"sync"
 
@@ -13,6 +14,15 @@ import (
 const (
 	CtxKeyPlayer server.ContextKey = "player"
 )
+
+func NewContextFromPlayer(parent context.Context, player *Player) context.Context {
+	return context.WithValue(parent, CtxKeyPlayer, player)
+}
+
+func PlayerFromContext(ctx context.Context) (player *Player, ok bool) {
+	player, ok = ctx.Value(CtxKeyPlayer).(*Player)
+	return player, ok
+}
 
 type Player struct {
 	Username string

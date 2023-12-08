@@ -1,5 +1,9 @@
 syntax = "proto3";
 
+package main;
+
+import "buf/validate/validate.proto";
+
 option go_package = "github.com/wanliqun/cgo-game-server/proto";
 
 enum Sex {
@@ -51,8 +55,18 @@ enum MessageType {
 // Define the main request and response messages
 
 message LoginRequest {
-  string username = 1;
-  string password = 2;
+  string username = 1 [(buf.validate.field).cel = {
+    id: "username_format",
+    message: "username must be 3 - 16 characters long and only conatain letters and digits",
+    // `this.matches` match the string against a regex pattern, and evaluates to a bool.
+    expression: "this.matches('^[A-Za-z0-9]{3,16}$')"
+  }];
+  string password = 2 [(buf.validate.field).string = {
+    // `min_len` validates that password must have at least 3 characters.
+    min_len: 1;
+    // `max_len` validates that password must have at most 32 characters.
+    max_len: 32;
+  }];
 }
 
 message LoginResponse { }

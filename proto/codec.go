@@ -38,7 +38,7 @@ func (c *Codec) Encode(msg proto.Message, w io.Writer) error {
 	}
 
 	// Write message length as the first 4 bytes in big endian.
-	if err := binary.Write(w, binary.BigEndian, c.Size(msg)); err != nil {
+	if err := binary.Write(w, binary.BigEndian, int32(len(data))); err != nil {
 		return errors.WithMessage(err, "failed to write message length")
 	}
 

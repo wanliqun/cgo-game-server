@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"net"
 	"sync"
 	"sync/atomic"
@@ -16,6 +17,15 @@ const (
 
 	CtxKeySession ContextKey = "session"
 )
+
+func NewContextFromSession(parent context.Context, sess *Session) context.Context {
+	return context.WithValue(parent, CtxKeySession, sess)
+}
+
+func SessionFromContext(ctx context.Context) (sess *Session, ok bool) {
+	sess, ok = ctx.Value(CtxKeySession).(*Session)
+	return sess, ok
+}
 
 type Session struct {
 	ID         string   // Session ID
