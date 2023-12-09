@@ -31,7 +31,7 @@ func NewCodec() *Codec {
 	}
 }
 
-func (c *Codec) Encode(msg proto.Message, w io.Writer) error {
+func (c *Codec) Encode(msg *Message, w io.Writer) error {
 	data, err := c.Marshal(msg)
 	if err != nil {
 		return errors.WithMessage(err, "failed to marshal message")

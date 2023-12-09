@@ -1,7 +1,7 @@
 package service
 
 import (
-	"github.com/wanliqun/cgo-game-server/game/common"
+	"github.com/wanliqun/cgo-game-server/common"
 	"github.com/wanliqun/cgo-game-server/server"
 )
 

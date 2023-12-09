@@ -8,12 +8,9 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/wanliqun/cgo-game-server/proto"
 	"github.com/xtaci/kcp-go/v5"
-	pbprotol "google.golang.org/protobuf/proto"
 )
 
 type ContextKey string
-
-type HandlerFunc func(context.Context, pbprotol.Message) pbprotol.Message
 
 type Server struct {
 	listener   net.Listener
@@ -26,7 +23,9 @@ type Server struct {
 }
 
 func NewServer(
-	codec *proto.Codec, sessionMgr *SessionManager, msgHandler HandlerFunc) *Server {
+	codec *proto.Codec,
+	sessionMgr *SessionManager,
+	msgHandler HandlerFunc) *Server {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	return &Server{
@@ -97,10 +96,10 @@ func (s *Server) handleConnection(conn net.Conn) {
 			break
 		}
 
-		ctx := context.WithValue(s.context, CtxKeySession, session)
-		resp := s.msgHandler(ctx, msg)
+		ctx := NewContextFromSession(s.context, session)
+		resp := s.msgHandler(ctx, NewMessage(msg))
 
-		if err := s.codec.Encode(resp, conn); err != nil {
+		if err := s.codec.Encode(resp.ProtoMessage(), conn); err != nil {
 			logger.WithError(err).
 				Debug("Server codec failed to encode proto message")
 			break

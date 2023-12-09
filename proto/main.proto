@@ -6,44 +6,6 @@ import "buf/validate/validate.proto";
 
 option go_package = "github.com/wanliqun/cgo-game-server/proto";
 
-enum Sex {
-  MALE = 0;
-  FEMALE = 1;
-}
-
-enum Culture {
-  AMERICAN = 0;
-  ARGENTINIAN = 1;
-  AUSTRALIAN = 2;
-  BRAZILIAN = 3;
-  BRITISH = 4;
-  BULGARIAN = 5;
-  CANADIAN = 6; 
-  CHINESE = 7;
-  DANISH = 8;
-  FINNISH = 9;
-  FRENCH = 10;
-  GERMAN = 11;
-  KAZAKH = 12;
-  MEXICAN = 13;
-  NORWEGIAN = 14;
-  POLISH = 15;
-  PORTUGUESE = 16;
-  RUSSIAN = 17;
-  SPANISH = 18;
-  SWEDISH = 19;
-  TURKISH = 20;
-  UKRAINIAN = 21;
-}
-
-enum StatusCode {
-  OK = 0;
-  UNKNOWN_ERROR = 1;
-  INVALID_PARAMETER = 2;
-  RESOURCE_NOT_FOUND = 3;
-  PERMISSION_DENIED = 4;
-}
-
 // The message type enum
 enum MessageType {
   INFO = 0; // INFO command
@@ -52,7 +14,7 @@ enum MessageType {
   GENERATE_RANDOM_NICKNAME = 3; // GENERATE_RANDOM_NICKNAME command
 }
 
-// Define the main request and response messages
+// Login in
 
 message LoginRequest {
   string username = 1 [(buf.validate.field).cel = {
@@ -71,9 +33,13 @@ message LoginRequest {
 
 message LoginResponse { }
 
+// Log out
+
 message LogoutRequest {}
 
 message LogoutResponse { }
+
+// Info
 
 message InfoRequest {}
 
@@ -87,9 +53,11 @@ message InfoResponse {
   map<string, string> metrics = 7; // metrics status as key-value pairs
 }
 
+// Generate random nickname
+
 message GenerateRandomNicknameRequest {
-  Sex sex = 1; // Sex
-  Culture culture = 2; // Culture
+  int32 sex = 1; // Sex
+  int32 culture = 2; // Culture
 }
 
 message GenerateRandomNicknameResponse {
@@ -108,7 +76,7 @@ message Request {
 
 // Message for conveying response status information
 message Status {
-  StatusCode code = 1; // Status code
+  int32 code = 1; // Status code
   string message = 2; // Descriptive message
 }
 
