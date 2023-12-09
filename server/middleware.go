@@ -3,11 +3,13 @@ package server
 import (
 	"context"
 	"runtime/debug"
+	"time"
 
 	"github.com/bufbuild/protovalidate-go"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/wanliqun/cgo-game-server/proto"
+	"google.golang.org/protobuf/encoding/protojson"
 	pbprotol "google.golang.org/protobuf/proto"
 )
 
@@ -17,7 +19,7 @@ var (
 	protoValidator *protovalidate.Validator
 
 	// Build builtin core middleware chain.
-	coreMiddlewares = []MiddlewareFunc{panicRecover, msgValidator}
+	coreMiddlewares = []MiddlewareFunc{panicRecover, logger, msgValidator}
 )
 
 func init() {
@@ -90,5 +92,31 @@ func msgValidator(next HandlerFunc) HandlerFunc {
 		}
 
 		return next(ctx, m)
+	}
+}
+
+// logger logs request, response and handling duration.
+func logger(next HandlerFunc) HandlerFunc {
+	return func(ctx context.Context, m pbprotol.Message) pbprotol.Message {
+		if logrus.IsLevelEnabled(logrus.DebugLevel) {
+			// Skip logging if `debug` level is not enabled.
+			return next(ctx, m)
+		}
+
+		// Start a timer
+		start := time.Now()
+
+		// Log the request
+		logrus.WithField("request", protojson.Format(m)).Debug("Request received")
+
+		// Pass to next handler chain
+		resp := next(ctx, m)
+
+		logrus.WithFields(logrus.Fields{
+			"response": protojson.Format(resp),
+			"elapsed":  time.Since(start),
+		}).Debug("Request handled")
+
+		return resp
 	}
 }
