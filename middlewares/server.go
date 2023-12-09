@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/wanliqun/cgo-game-server/server"
+	"github.com/wanliqun/cgo-game-server/service"
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
@@ -17,7 +18,8 @@ type MiddlewareFunc func(server.HandlerFunc) server.HandlerFunc
 var (
 	protoValidator *protovalidate.Validator
 
-	errPanicCrash = errors.New("panic crash")
+	errPanicCrash   = errors.New("panic crash")
+	errAuthRequired = errors.New("authentication required")
 )
 
 func init() {
@@ -74,7 +76,7 @@ func PanicRecover(next server.HandlerFunc) server.HandlerFunc {
 // MsgValidator validates protobuf messages.
 func MsgValidator(next server.HandlerFunc) server.HandlerFunc {
 	return func(ctx context.Context, m *server.Message) *server.Message {
-		if err := protoValidator.Validate(m.Message); err != nil {
+		if err := protoValidator.Validate(m); err != nil {
 			err = server.NewBadRequestError(err)
 			return server.NewErrorMessage(err)
 		}
@@ -103,8 +105,29 @@ func Logger(next server.HandlerFunc) server.HandlerFunc {
 		logrus.WithFields(logrus.Fields{
 			"response": protojson.Format(resp),
 			"elapsed":  time.Since(start),
+			"err":      resp.Error,
 		}).Debug("Request handled")
 
 		return resp
+	}
+}
+
+// Authentication middleware.
+func Authenticator(next server.HandlerFunc) server.HandlerFunc {
+	return func(ctx context.Context, m *server.Message) *server.Message {
+		req := m.GetRequest()
+		if req.GetLogin() != nil || req.GetInfo() != nil {
+			// Non-Auth action required
+			return next(ctx, m)
+		}
+
+		player, ok := service.PlayerFromContext(ctx)
+		if ok && player != nil {
+			// Player already logined in
+			return next(ctx, m)
+		}
+
+		err := server.NewBadRequestError(errAuthRequired)
+		return server.NewErrorMessage(err)
 	}
 }
