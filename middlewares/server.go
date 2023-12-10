@@ -66,7 +66,7 @@ func PanicRecover(next server.HandlerFunc) server.HandlerFunc {
 			}).Error("RPC middleware panic")
 
 			// Resp server error
-			res = server.NewErrorMessage(errPanicCrash)
+			res = server.NewMessageWithError(errPanicCrash)
 		}()
 
 		return next(ctx, m)
@@ -78,7 +78,7 @@ func MsgValidator(next server.HandlerFunc) server.HandlerFunc {
 	return func(ctx context.Context, m *server.Message) *server.Message {
 		if err := protoValidator.Validate(m); err != nil {
 			err = server.NewBadRequestError(err)
-			return server.NewErrorMessage(err)
+			return server.NewMessageWithError(err)
 		}
 
 		return next(ctx, m)
@@ -128,6 +128,6 @@ func Authenticator(next server.HandlerFunc) server.HandlerFunc {
 		}
 
 		err := server.NewBadRequestError(errAuthRequired)
-		return server.NewErrorMessage(err)
+		return server.NewMessageWithError(err)
 	}
 }

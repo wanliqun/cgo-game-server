@@ -17,7 +17,10 @@ func NewMessage(msg *proto.Message) *Message {
 	return &Message{Message: msg}
 }
 
-func NewErrorMessage(err error) *Message {
+func NewMessageWithError(err error) *Message {
+	if err == nil {
+		err = NilError
+	}
 	return &Message{Error: err}
 }
 
@@ -32,7 +35,7 @@ func (m *Message) ProtoMessage() *proto.Message {
 		status = v.Status()
 	}
 
-	return proto.NewStatusMessage(&proto.Status{
+	return proto.NewResponseMessage(&proto.Status{
 		Code:    status,
 		Message: m.Error.Error(),
 	})

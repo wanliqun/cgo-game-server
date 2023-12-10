@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"errors"
 	"sync"
 
 	"github.com/badu/bus"
@@ -81,7 +80,7 @@ func (s *PlayerService) GetBySession(sessionID string) *Player {
 
 func (s *PlayerService) Login(req *proto.LoginRequest, session *server.Session) (*Player, error) {
 	if req.Password != config.Shared().Server.Password {
-		return nil, errors.New("wrong password")
+		return nil, errInvalidPassword
 	}
 
 	player := s.GetByUser(req.Username)

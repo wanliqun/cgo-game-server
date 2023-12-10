@@ -2,13 +2,12 @@ package command
 
 import (
 	"context"
-	"errors"
 
 	"github.com/wanliqun/cgo-game-server/config"
 	"github.com/wanliqun/cgo-game-server/proto"
 	"github.com/wanliqun/cgo-game-server/server"
 	"github.com/wanliqun/cgo-game-server/service"
-	pbprotol "google.golang.org/protobuf/proto"
+	pbproto "google.golang.org/protobuf/proto"
 )
 
 var (
@@ -19,7 +18,7 @@ var (
 )
 
 type Command interface {
-	Execute(context.Context) (pbprotol.Message, error)
+	Execute(context.Context) (pbproto.Message, error)
 }
 
 type LoginCommand struct {
@@ -35,9 +34,10 @@ func NewLoginCommand(
 	}
 }
 
-func (cmd *LoginCommand) Execute(ctx context.Context) (pbprotol.Message, error) {
+func (cmd *LoginCommand) Execute(ctx context.Context) (pbproto.Message, error) {
 	session := ctx.Value(server.CtxKeySession).(*server.Session)
 	_, err := cmd.playerService.Login(cmd.reqeuest, session)
+
 	return nil, err
 }
 
@@ -49,13 +49,8 @@ func NewLogoutCommand(playerService *service.PlayerService) *LogoutCommand {
 	return &LogoutCommand{playerService: playerService}
 }
 
-func (cmd *LogoutCommand) Execute(ctx context.Context) (pbprotol.Message, error) {
-	cv := ctx.Value(service.CtxKeyPlayer)
-	if cv == nil {
-		return nil, errors.New("not logined yet")
-	}
-
-	player := cv.(*service.Player)
+func (cmd *LogoutCommand) Execute(ctx context.Context) (pbproto.Message, error) {
+	player, _ := service.PlayerFromContext(ctx)
 	cmd.playerService.Kickoff(player)
 
 	return nil, nil
@@ -69,12 +64,12 @@ func NewInfoCommand(axService *service.AuxiliaryService) *InfoCommand {
 	return &InfoCommand{axService: axService}
 }
 
-func (cmd *InfoCommand) Execute(ctx context.Context) (pbprotol.Message, error) {
+func (cmd *InfoCommand) Execute(ctx context.Context) (pbproto.Message, error) {
 	srvCfg := config.Shared().Server
 	srvStat := cmd.axService.CollectServerStatus()
 	rateMetrics := cmd.axService.GatherRPCRateMetrics()
 
-	resp := &proto.InfoResponse{
+	return &proto.InfoResponse{
 		ServerName:            srvCfg.Name,
 		MaxPlayerCapacity:     int32(srvCfg.MaxPlayerCapacity),
 		MaxConnectionCapacity: int32(srvCfg.MaxConnectionCapacity),
@@ -83,9 +78,7 @@ func (cmd *InfoCommand) Execute(ctx context.Context) (pbprotol.Message, error) {
 		OnlinePlayers:  int32(srvStat.NumOnlinePlayers),
 		TcpConnections: int32(srvStat.NumTCPConnections),
 		UdpConnections: int32(srvStat.NumUDPConnections),
-	}
-
-	return resp, nil
+	}, nil
 }
 
 type GenerateRandomNicknameCommand struct {
@@ -102,7 +95,7 @@ func NewGenerateRandomNicknameCommand(
 	}
 }
 
-func (cmd *GenerateRandomNicknameCommand) Execute(ctx context.Context) (pbprotol.Message, error) {
+func (cmd *GenerateRandomNicknameCommand) Execute(ctx context.Context) (pbproto.Message, error) {
 	nickname := cmd.axService.Generate(cmd.request.Sex, cmd.request.Culture)
 	return &proto.GenerateRandomNicknameResponse{Nickname: nickname}, nil
 }
