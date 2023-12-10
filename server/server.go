@@ -12,13 +12,8 @@ import (
 	"github.com/xtaci/kcp-go/v5"
 )
 
-type ProtocolType string
-
 const (
 	defaultShutdownTimeout = 5 * time.Second
-
-	ProtocolTCP ProtocolType = "tcp"
-	ProtocolUDP ProtocolType = "udp"
 )
 
 const (
@@ -38,19 +33,17 @@ type Server struct {
 	status             atomic.Int32 // Server status
 }
 
-func NewServer(
-	ptype ProtocolType, addr string, ch *ConnectionHandler) (srv *Server, err error) {
-
-	var l net.Listener
-	switch ptype {
-	case ProtocolTCP:
-		l, err = net.Listen("tcp", addr)
-	case ProtocolUDP:
-		l, err = kcp.Listen(addr)
-	default:
-		return nil, errProtocolNotSupported
+func NewTCPServer(addr string, ch *ConnectionHandler) (srv *Server, err error) {
+	l, err := net.Listen("tcp", addr)
+	if err != nil {
+		return nil, err
 	}
 
+	return &Server{ConnectionHandler: ch, listener: l}, nil
+}
+
+func NewUDPServer(addr string, ch *ConnectionHandler) (srv *Server, err error) {
+	l, err := kcp.Listen(addr)
 	if err != nil {
 		return nil, err
 	}

@@ -52,16 +52,12 @@ func NewApplication(configYaml string) (*Application, error) {
 	codec := proto.NewCodec()
 	connHandler := server.NewConnectionHandler(msgHandler, sessionMgr, codec)
 
-	udpServer, err := server.NewServer(
-		server.ProtocolUDP, cfg.Server.UDPEndpoint, connHandler,
-	)
+	udpServer, err := server.NewUDPServer(cfg.Server.UDPEndpoint, connHandler)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to new UDP server")
 	}
 
-	tcpServer, err := server.NewServer(
-		server.ProtocolTCP, cfg.Server.TCPEndpoint, connHandler,
-	)
+	tcpServer, err := server.NewTCPServer(cfg.Server.TCPEndpoint, connHandler)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to new TCP server")
 	}
