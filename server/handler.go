@@ -37,8 +37,9 @@ func (m *Message) ProtoMessage() *proto.Message {
 		status = v.Status()
 	}
 
-	return proto.NewResponseMessage(&proto.Status{
+	msg, _ := proto.NewResponseMessage(&proto.Status{
 		Code:    status,
 		Message: m.Error.Error(),
 	})
+	return msg
 }

@@ -46,5 +46,6 @@ func (e *Executor) Execute(ctx context.Context, msg *server.Message) *server.Mes
 		return server.NewMessageWithError(err)
 	}
 
-	return server.NewMessage(proto.NewResponseMessage(pbmsg))
+	respMsg, _ := proto.NewResponseMessage(pbmsg)
+	return server.NewMessage(respMsg)
 }
