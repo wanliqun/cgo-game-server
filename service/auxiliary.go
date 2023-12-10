@@ -5,6 +5,7 @@ import (
 
 	gometrics "github.com/rcrowley/go-metrics"
 	"github.com/wanliqun/cgo-game-server/common"
+	"github.com/wanliqun/cgo-game-server/config"
 	"github.com/wanliqun/cgo-game-server/metrics"
 )
 
@@ -16,10 +17,13 @@ type ServerStatus struct {
 
 type AuxiliaryService struct {
 	common.MonickerGenerator
+
+	Config *config.Config
 }
 
-func NewAuxiliaryService(generator common.MonickerGenerator) *AuxiliaryService {
-	return &AuxiliaryService{MonickerGenerator: generator}
+func NewAuxiliaryService(
+	cfg *config.Config, generator common.MonickerGenerator) *AuxiliaryService {
+	return &AuxiliaryService{Config: cfg, MonickerGenerator: generator}
 }
 
 func (s *AuxiliaryService) CollectServerStatus() *ServerStatus {

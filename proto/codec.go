@@ -8,8 +8,6 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-var ()
-
 // Codec serializes and deserializes data between protocol message and underlying network package data.
 type Codec struct {
 	proto.MarshalOptions
@@ -52,7 +50,7 @@ func (c *Codec) Encode(msg *Message, w io.Writer) error {
 
 func (c *Codec) Decode(r io.Reader) (*Message, error) {
 	// Read message length.
-	len := 0
+	len := int32(0)
 	if err := binary.Read(r, binary.BigEndian, &len); err != nil {
 		return nil, errors.WithMessage(err, "failed to read message length")
 	}

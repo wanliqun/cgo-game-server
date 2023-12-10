@@ -2,6 +2,7 @@ package service
 
 import (
 	"github.com/wanliqun/cgo-game-server/common"
+	"github.com/wanliqun/cgo-game-server/config"
 	"github.com/wanliqun/cgo-game-server/server"
 )
 
@@ -11,9 +12,11 @@ type Factory struct {
 }
 
 func NewFactory(
-	sessionMgr *server.SessionManager, monickerGenerator common.MonickerGenerator) *Factory {
+	conf *config.Config,
+	sessionMgr *server.SessionManager,
+	monickerGenerator common.MonickerGenerator) *Factory {
 	return &Factory{
-		Player:    NewPlayerService(sessionMgr),
-		Auxiliary: NewAuxiliaryService(monickerGenerator),
+		Player:    NewPlayerService(conf, sessionMgr),
+		Auxiliary: NewAuxiliaryService(conf, monickerGenerator),
 	}
 }

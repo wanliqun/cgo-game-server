@@ -19,3 +19,7 @@
 
 # Go workspace file
 go.work
+
+# Temp folder && files
+.tmp
+.DS_Store

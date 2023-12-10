@@ -3,6 +3,8 @@ package server
 import (
 	"context"
 	"net"
+	"sync/atomic"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -10,112 +12,150 @@ import (
 	"github.com/xtaci/kcp-go/v5"
 )
 
-type ContextKey string
+type ProtocolType string
+
+const (
+	defaultShutdownTimeout = 5 * time.Second
+
+	ProtocolTCP ProtocolType = "tcp"
+	ProtocolUDP ProtocolType = "udp"
+)
+
+const (
+	ServerStatusInitial int32 = iota
+	ServerStatusStarted
+	ServerStatusStopped
+)
+
+var (
+	errServerClosed         = errors.New("server closed")
+	errProtocolNotSupported = errors.New("only TCP/UDP are supported")
+)
 
 type Server struct {
-	listener   net.Listener
-	msgHandler HandlerFunc
-	sessionMgr *SessionManager
-	codec      *proto.Codec
-
-	context context.Context
-	cancel  context.CancelFunc
+	*ConnectionHandler              // Connection handler
+	listener           net.Listener // Net listener
+	status             atomic.Int32 // Server status
 }
 
 func NewServer(
-	codec *proto.Codec,
-	sessionMgr *SessionManager,
-	msgHandler HandlerFunc) *Server {
-	ctx, cancel := context.WithCancel(context.Background())
+	ptype ProtocolType, addr string, ch *ConnectionHandler) (srv *Server, err error) {
 
-	return &Server{
-		codec:      codec,
-		msgHandler: msgHandler,
-		sessionMgr: sessionMgr,
-		context:    ctx,
-		cancel:     cancel,
-	}
-}
-
-func (s *Server) ListenTCP(endpoint string) (err error) {
-	if s.listener != nil {
-		return errors.New("server already listened")
+	var l net.Listener
+	switch ptype {
+	case ProtocolTCP:
+		l, err = net.Listen("tcp", addr)
+	case ProtocolUDP:
+		l, err = kcp.Listen(addr)
+	default:
+		return nil, errProtocolNotSupported
 	}
 
-	s.listener, err = net.Listen("tcp", endpoint)
-	return err
-}
-
-func (s *Server) ListenUDP(endpoint string) (err error) {
-	if s.listener != nil {
-		return errors.New("server already listened")
+	if err != nil {
+		return nil, err
 	}
 
-	s.listener, err = kcp.Listen(endpoint)
-	return err
+	return &Server{ConnectionHandler: ch, listener: l}, nil
 }
 
-func (s *Server) Start() error {
-	if s.listener == nil {
-		return errors.New("server not listened yet")
+// Serve always returns a non-nil error and closes l.
+// After closed, the returned error is errServerClosed.
+func (srv *Server) Serve() error {
+	if srv.status.Load() == ServerStatusStopped {
+		return errServerClosed
 	}
 
-	go func() { // Accept new connections.
-		for {
-			conn, err := s.listener.Accept()
-			if err != nil {
-				logrus.WithError(err).
-					WithField("listenAddr", s.listener.Addr()).
-					Debug("Server failed to accept new client connection")
-				continue
-			}
+	if !srv.status.CompareAndSwap(ServerStatusInitial, ServerStatusStarted) {
+		return nil
+	}
 
-			go s.handleConnection(conn)
-		}
-	}()
-
-	return nil
-}
-
-func (s *Server) handleConnection(conn net.Conn) {
 	logger := logrus.WithFields(logrus.Fields{
-		"listenAddr": s.listener.Addr(),
+		"endpoint": srv.listener.Addr(),
+		"protocol": srv.listener.Addr().Network(),
+	})
+	logger.Info("Server listened endpoint started serving")
+
+	defer srv.listener.Close()
+	for {
+		conn, err := srv.listener.Accept()
+		if err == nil {
+			go srv.Handle(srv.listener, conn)
+			continue
+		}
+
+		if srv.status.Load() == ServerStatusStopped {
+			return errServerClosed
+		}
+
+		logger.WithError(err).Debug("Server failed to accept connection")
+		return err
+	}
+}
+
+func (srv *Server) Close() error {
+	if srv.status.Load() == ServerStatusStopped {
+		return errServerClosed
+	}
+
+	if !srv.status.CompareAndSwap(ServerStatusStarted, ServerStatusStopped) {
+		return nil
+	}
+
+	// Close listener
+	srv.listener.Close()
+
+	// Terminate all connections.
+	ctx, cancel := context.WithTimeout(context.Background(), defaultShutdownTimeout)
+	defer cancel()
+
+	return srv.SessManager.TerminateAll(ctx)
+}
+
+type ConnectionHandler struct {
+	Handler     HandlerFunc     // Connection handler
+	SessManager *SessionManager // Session manager
+	Codec       *proto.Codec    // Protocol codec
+}
+
+func NewConnectionHandler(
+	h HandlerFunc, mgr *SessionManager, codec *proto.Codec) *ConnectionHandler {
+	return &ConnectionHandler{
+		Handler: h, SessManager: mgr, Codec: codec,
+	}
+}
+
+// handleConnection handles new accepted connection from net listener.
+func (ch *ConnectionHandler) Handle(l net.Listener, conn net.Conn) {
+	logger := logrus.WithFields(logrus.Fields{
+		"protocol":   l.Addr().Network(),
+		"listenAddr": l.Addr(),
 		"remoteAddr": conn.RemoteAddr(),
 	})
-	logger.Debug("Client connection established")
+	logger.Debug("New connection established")
 
 	session := NewSession(conn)
-	s.sessionMgr.Add(session)
-	defer s.sessionMgr.Terminate(session)
+	ch.SessManager.Add(session)
+	defer ch.SessManager.Terminate(session)
 
 	for {
-		msg, err := s.codec.Decode(conn)
+		msg, err := ch.Codec.Decode(conn)
 		if err != nil {
 			logger.WithError(err).
-				Debug("Server codec failed to decode proto message")
+				Debug("Codec failed to decode proto message")
 			break
 		}
 
-		ctx := NewContextFromSession(s.context, session)
-		resp := s.msgHandler(ctx, NewMessage(msg))
+		ctx := NewContextFromSession(context.Background(), session)
+		resp := ch.Handler(ctx, NewMessage(msg))
 
-		if err := s.codec.Encode(resp.ProtoMessage(), conn); err != nil {
+		if err := ch.Codec.Encode(resp.ProtoMessage(), conn); err != nil {
 			logger.WithError(err).
-				Debug("Server codec failed to encode proto message")
+				Debug("Codec failed to encode proto message")
 			break
 		}
 
 		session.Refresh()
 	}
 
-	logger.Debug("Client connection closed")
-}
-
-func (s *Server) Stop() error {
-	defer func() {
-		s.listener = nil
-		s.sessionMgr.TerminateAll()
-	}()
-
-	return s.listener.Close()
+	logger.Debug("Connection termiated")
 }

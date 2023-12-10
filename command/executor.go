@@ -17,6 +17,10 @@ type Executor struct {
 	svcFactory *service.Factory
 }
 
+func NewExecutor(svcFactory *service.Factory) *Executor {
+	return &Executor{svcFactory: svcFactory}
+}
+
 func (e *Executor) Execute(ctx context.Context, msg *server.Message) *server.Message {
 	var cmd Command
 	req := msg.GetRequest()

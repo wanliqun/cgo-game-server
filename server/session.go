@@ -9,6 +9,7 @@ import (
 
 	"github.com/badu/bus"
 	"github.com/google/uuid"
+	"go.uber.org/multierr"
 )
 
 const (
@@ -49,10 +50,11 @@ func (s *Session) LastActive() time.Time {
 	return time.Unix(atomic.LoadInt64(&s.lastActive), 0)
 }
 
-func (s *Session) Close() {
+func (s *Session) Close() error {
 	if s.Conn != nil {
-		s.Conn.Close()
+		return s.Conn.Close()
 	}
+	return nil
 }
 
 type SessionManager struct {
@@ -75,27 +77,34 @@ func (m *SessionManager) Add(sess *Session) {
 	m.sessions[sess.ID] = sess
 }
 
-func (m *SessionManager) Terminate(sess *Session) bool {
+func (m *SessionManager) Terminate(sess *Session) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	if s, ok := m.sessions[sess.ID]; ok {
-		s.Close()
 		delete(m.sessions, sess.ID)
-		return true
+		return s.Close()
 	}
 
-	return false
+	return nil
 }
 
-func (m *SessionManager) TerminateAll() {
+func (m *SessionManager) TerminateAll(ctx context.Context) (err error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	for _, s := range m.sessions {
-		s.Close()
-		delete(m.sessions, s.ID)
+		select {
+		case <-ctx.Done():
+			err = multierr.Append(err, ctx.Err())
+			return
+		default:
+			delete(m.sessions, s.ID)
+			err = multierr.Append(err, s.Close())
+		}
 	}
+
+	return err
 }
 
 func (m *SessionManager) ListAll() []*Session {

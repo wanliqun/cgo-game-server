@@ -30,13 +30,15 @@ type Player struct {
 
 type PlayerService struct {
 	mu          sync.Mutex
+	config      *config.Config
 	usrPlayers  map[string]*Player // username=>Player
 	sessPlayers map[string]*Player // session=>Player
 	sessionMgr  *server.SessionManager
 }
 
-func NewPlayerService(sessionMgr *server.SessionManager) *PlayerService {
+func NewPlayerService(conf *config.Config, sessionMgr *server.SessionManager) *PlayerService {
 	ps := &PlayerService{
+		config:      conf,
 		sessionMgr:  sessionMgr,
 		usrPlayers:  make(map[string]*Player),
 		sessPlayers: make(map[string]*Player),
@@ -79,7 +81,7 @@ func (s *PlayerService) GetBySession(sessionID string) *Player {
 }
 
 func (s *PlayerService) Login(req *proto.LoginRequest, session *server.Session) (*Player, error) {
-	if req.Password != config.Shared().Server.Password {
+	if req.Password != s.config.Server.Password {
 		return nil, errInvalidPassword
 	}
 

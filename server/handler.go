@@ -6,6 +6,8 @@ import (
 	"github.com/wanliqun/cgo-game-server/proto"
 )
 
+type ContextKey string
+
 type HandlerFunc func(context.Context, *Message) *Message
 
 type Message struct {

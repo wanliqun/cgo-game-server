@@ -3,7 +3,6 @@ package command
 import (
 	"context"
 
-	"github.com/wanliqun/cgo-game-server/config"
 	"github.com/wanliqun/cgo-game-server/proto"
 	"github.com/wanliqun/cgo-game-server/server"
 	"github.com/wanliqun/cgo-game-server/service"
@@ -65,7 +64,7 @@ func NewInfoCommand(axService *service.AuxiliaryService) *InfoCommand {
 }
 
 func (cmd *InfoCommand) Execute(ctx context.Context) (pbproto.Message, error) {
-	srvCfg := config.Shared().Server
+	srvCfg := cmd.axService.Config.Server
 	srvStat := cmd.axService.CollectServerStatus()
 	rateMetrics := cmd.axService.GatherRPCRateMetrics()
 
