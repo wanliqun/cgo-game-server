@@ -2,9 +2,11 @@ package proto
 
 import (
 	"encoding/binary"
+	"encoding/hex"
 	"io"
 
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -18,13 +20,9 @@ func NewCodec() *Codec {
 	return &Codec{
 		MarshalOptions: proto.MarshalOptions{
 			Deterministic: true, // use deterministic ordering for map fields
-			AllowPartial:  true, // allow marshaling messages with missing required fields
-			UseCachedSize: true, // use the cached size of the message if available
 		},
 		UnmarshalOptions: proto.UnmarshalOptions{
-			AllowPartial:   true,  // allow unmarshaling messages with missing required fields
-			DiscardUnknown: true,  // discard unknown fields
-			Merge:          false, // do not merge with existing message
+			DiscardUnknown: true, // discard unknown fields
 		},
 	}
 }
@@ -45,6 +43,12 @@ func (c *Codec) Encode(msg *Message, w io.Writer) error {
 		return errors.WithMessage(err, "failed to write msg data")
 	}
 
+	logrus.WithFields(logrus.Fields{
+		"dataLen": len(data),
+		"dataHex": hex.EncodeToString(data),
+		"msg":     msg.String(),
+	}).Debug("Codec encodes message")
+
 	return nil
 }
 
@@ -56,7 +60,7 @@ func (c *Codec) Decode(r io.Reader) (*Message, error) {
 	}
 
 	// Read message data.
-	data := make([]byte, 0, len)
+	data := make([]byte, len)
 	if _, err := r.Read(data); err != nil {
 		return nil, errors.WithMessage(err, "failed to read message data")
 	}
@@ -65,6 +69,12 @@ func (c *Codec) Decode(r io.Reader) (*Message, error) {
 	if err := c.Unmarshal(data, msg); err != nil {
 		return nil, errors.WithMessage(err, "failed to unmarshal msg data")
 	}
+
+	logrus.WithFields(logrus.Fields{
+		"dataLen": len,
+		"dataHex": hex.EncodeToString(data),
+		"msg":     msg.String(),
+	}).Debug("Codec decodes message")
 
 	return msg, nil
 }
