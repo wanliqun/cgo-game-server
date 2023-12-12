@@ -113,21 +113,25 @@ func Logger(next server.HandlerFunc) server.HandlerFunc {
 }
 
 // Authentication middleware.
-func Authenticator(next server.HandlerFunc) server.HandlerFunc {
-	return func(ctx context.Context, m *server.Message) *server.Message {
-		req := m.GetRequest()
-		if req.GetLogin() != nil || req.GetInfo() != nil {
-			// Non-Auth action required
-			return next(ctx, m)
-		}
+func Authenticator(s *service.PlayerService) MiddlewareFunc {
+	return func(next server.HandlerFunc) server.HandlerFunc {
+		return func(ctx context.Context, m *server.Message) *server.Message {
+			req := m.GetRequest()
+			if req.GetLogin() != nil || req.GetInfo() != nil {
+				// Non-Auth action required
+				return next(ctx, m)
+			}
 
-		player, ok := service.PlayerFromContext(ctx)
-		if ok && player != nil {
+			sess, _ := server.SessionFromContext(ctx)
+			player := s.GetBySession(sess.ID)
+			if player == nil {
+				err := server.NewBadRequestError(errAuthRequired)
+				return server.NewMessageWithError(err)
+			}
+
 			// Player already logined in
+			ctx = service.NewContextFromPlayer(ctx, player)
 			return next(ctx, m)
 		}
-
-		err := server.NewBadRequestError(errAuthRequired)
-		return server.NewMessageWithError(err)
 	}
 }

@@ -9,6 +9,7 @@ import (
 
 	"github.com/badu/bus"
 	"github.com/google/uuid"
+	"github.com/sirupsen/logrus"
 	"go.uber.org/multierr"
 )
 
@@ -146,6 +147,11 @@ func (m *SessionManager) checkTimeout() {
 	for _, s := range m.all() {
 		// Check if the session has been inactive for longer than the timeout duration.
 		if time.Since(s.LastActive()) >= timeOutDuration {
+			logrus.WithFields(logrus.Fields{
+				"remoteAddr": s.Conn.RemoteAddr(),
+				"lastActive": s.LastActive(),
+			}).Debug("Terminate session due to timeout")
+
 			m.Terminate(s)
 			// Publish session terminated event
 			bus.Pub(&SessionTerminatedEvent{Sess: s})
