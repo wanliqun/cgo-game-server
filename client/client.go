@@ -107,6 +107,7 @@ func (c *Client) handleConnection(conn net.Conn) {
 			if conn, err := c.reconnect(ctx); err == nil {
 				c.recovering.Store(false)
 				go c.handleConnection(conn)
+				return
 			}
 		}
 	}
