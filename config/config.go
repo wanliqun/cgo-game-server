@@ -9,11 +9,12 @@ import (
 	"github.com/knadh/koanf/v2"
 	"github.com/mcuadros/go-defaults"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 type LogConfig struct {
 	Level      string `default:"info"`
-	ForceColor bool   `default:"false"`
+	ForceColor bool   `default:"true"`
 }
 
 type ServerConfig struct {
@@ -53,4 +54,23 @@ func NewConfig(configYaml string) (*Config, error) {
 	}
 
 	return cfg, nil
+}
+
+func InitLogger(cfg *LogConfig) error {
+	// Set log level
+	level, err := logrus.ParseLevel(cfg.Level)
+	if err != nil {
+		return errors.WithMessagef(err, "invalid log level: %v", cfg.Level)
+	}
+	logrus.SetLevel(level)
+
+	// Set force color
+	if cfg.ForceColor {
+		logrus.SetFormatter(&logrus.TextFormatter{
+			ForceColors:   true,
+			FullTimestamp: true,
+		})
+	}
+
+	return nil
 }

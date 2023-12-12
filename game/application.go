@@ -4,7 +4,6 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 	"github.com/wanliqun/cgo-game-server/command"
 	"github.com/wanliqun/cgo-game-server/common"
 	"github.com/wanliqun/cgo-game-server/config"
@@ -28,7 +27,7 @@ func NewApplication(configYaml string) (*Application, error) {
 		return nil, errors.WithMessage(err, "failed to load config")
 	}
 
-	if err := initLogger(cfg); err != nil {
+	if err := config.InitLogger(&cfg.Log); err != nil {
 		return nil, errors.WithMessage(err, "failed to init logger")
 	}
 
@@ -82,20 +81,4 @@ func (app *Application) Close() {
 	app.sessionMgr.Stop()
 	app.udpServer.Close()
 	app.tcpServer.Close()
-}
-
-func initLogger(cfg *config.Config) error {
-	// Set log level
-	level, err := logrus.ParseLevel(cfg.Log.Level)
-	if err != nil {
-		return errors.WithMessagef(err, "invalid log level: %v", cfg.Log.Level)
-	}
-	logrus.SetLevel(level)
-
-	// Set force color
-	if cfg.Log.ForceColor {
-		logrus.SetFormatter(&logrus.TextFormatter{ForceColors: true, FullTimestamp: true})
-	}
-
-	return nil
 }

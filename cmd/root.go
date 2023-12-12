@@ -5,7 +5,6 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	"github.com/wanliqun/cgo-game-server/game"
 )
 
 var (
@@ -24,6 +23,9 @@ func init() {
 		"config", "c", "config/config.yml",
 		"YAML config file path to load",
 	)
+
+	rootCmd.AddCommand(serverCmd)
+	rootCmd.AddCommand(simulatorCmd)
 }
 
 func Execute() {
@@ -34,10 +36,5 @@ func Execute() {
 }
 
 func run(cmd *cobra.Command, args []string) {
-	app, err := game.NewApplication(configYaml)
-	if err != nil {
-		panic(err)
-	}
-
-	app.Run()
+	cmd.Help()
 }
