@@ -15,8 +15,8 @@ func NewFactory(
 	conf *config.Config,
 	sessionMgr *server.SessionManager,
 	monickerGenerator common.MonickerGenerator) *Factory {
-	return &Factory{
-		Player:    NewPlayerService(conf, sessionMgr),
-		Auxiliary: NewAuxiliaryService(conf, monickerGenerator),
-	}
+
+	playerSvc := NewPlayerService(conf, sessionMgr)
+	auxSvc := NewAuxiliaryService(conf, monickerGenerator, playerSvc, sessionMgr)
+	return &Factory{Player: playerSvc, Auxiliary: auxSvc}
 }

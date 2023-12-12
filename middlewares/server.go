@@ -8,6 +8,7 @@ import (
 	"github.com/bufbuild/protovalidate-go"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"github.com/wanliqun/cgo-game-server/metrics"
 	"github.com/wanliqun/cgo-game-server/server"
 	"github.com/wanliqun/cgo-game-server/service"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -97,7 +98,7 @@ func Logger(next server.HandlerFunc) server.HandlerFunc {
 		start := time.Now()
 
 		// Log the request
-		logrus.WithField("request", protojson.Format(m)).Debug("Request received")
+		logrus.WithField("request", m.String()).Debug("Request received")
 
 		// Pass to next handler chain
 		resp := next(ctx, m)
@@ -133,5 +134,21 @@ func Authenticator(s *service.PlayerService) MiddlewareFunc {
 			ctx = service.NewContextFromPlayer(ctx, player)
 			return next(ctx, m)
 		}
+	}
+}
+
+// Metrics collects RPC latency and QPS.
+func Metrics(next server.HandlerFunc) server.HandlerFunc {
+	return func(ctx context.Context, m *server.Message) *server.Message {
+		// Start a timer
+		start := time.Now()
+
+		// Pass to next handler chain
+		resp := next(ctx, m)
+
+		// Rate RPC latency and QPS
+		metrics.RPC.Rate(m.Type, resp.Error, start)
+
+		return resp
 	}
 }

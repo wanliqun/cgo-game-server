@@ -10,35 +10,17 @@ import (
 )
 
 const (
-	onlinePlayersMetricKey = "concurrent_players"
-	udpConnsMetricKey      = "udp_connections"
-	tcpConnsMetricKey      = "tcp_connections"
-
 	tplRpcSuccessRateMetricKey = "rpc.rate.%s.success"
 	tplRpcErrorRateMetricKey   = "rpc.rate.%s.error"
 )
 
 var (
+	overallRpcRateMetricKey        = "rpc.rate.overall"
 	overallRpcSuccessRateMetricKey = rpcSuccessRateMetricKey("overall")
 	overallRpcErrorRateMetricKey   = rpcErrorRateMetricKey("overall")
 
-	Server = new(serverMetrics)
-	RPC    = newRpcMetrics()
+	RPC = newRpcMetrics()
 )
-
-type serverMetrics struct{}
-
-func (m *serverMetrics) OnlinePlayers() metrics.Gauge {
-	return metrics.GetOrRegisterGauge(onlinePlayersMetricKey, nil)
-}
-
-func (m *serverMetrics) UDPConnections() metrics.Gauge {
-	return metrics.GetOrRegisterGauge(udpConnsMetricKey, nil)
-}
-
-func (m *serverMetrics) TCPConnections() metrics.Gauge {
-	return metrics.GetOrRegisterGauge(tcpConnsMetricKey, nil)
-}
 
 type rpcMetrics struct {
 	mu         sync.Mutex
@@ -64,6 +46,10 @@ func (m *rpcMetrics) GetOrRegisterTimer(rk string) metrics.Timer {
 	return t
 }
 
+func (m *rpcMetrics) OverallRpcRateTimer() metrics.Timer {
+	return m.GetOrRegisterTimer(overallRpcRateMetricKey)
+}
+
 func (m *rpcMetrics) IterateRateTimers(cb func(key string, t metrics.Timer)) {
 	rateKeys := m.allRateKeys()
 	for i := range rateKeys {
@@ -84,7 +70,7 @@ func (m *rpcMetrics) allRateKeys() (res []string) {
 }
 
 func (m *rpcMetrics) Rate(msgType proto.MessageType, err error, start time.Time) {
-	metricKeys := []string{}
+	metricKeys := []string{overallRpcRateMetricKey}
 
 	if err != nil {
 		metricKeys = append(metricKeys, overallRpcErrorRateMetricKey)

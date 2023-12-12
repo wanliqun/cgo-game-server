@@ -2,39 +2,66 @@ package service
 
 import (
 	"fmt"
+	"time"
 
 	gometrics "github.com/rcrowley/go-metrics"
 	"github.com/wanliqun/cgo-game-server/common"
 	"github.com/wanliqun/cgo-game-server/config"
 	"github.com/wanliqun/cgo-game-server/metrics"
+	"github.com/wanliqun/cgo-game-server/server"
 )
 
 type ServerStatus struct {
-	NumOnlinePlayers  int64
-	NumTCPConnections int64
-	NumUDPConnections int64
+	ServerName       string
+	Uptime           time.Duration
+	NumOnlinePlayers int32
+	TotalConnections int32
 }
 
 type AuxiliaryService struct {
 	common.MonickerGenerator
-
-	Config *config.Config
+	Config    *config.Config
+	playerSvc *PlayerService
+	sessMgr   *server.SessionManager
+	start     time.Time
 }
 
 func NewAuxiliaryService(
-	cfg *config.Config, generator common.MonickerGenerator) *AuxiliaryService {
-	return &AuxiliaryService{Config: cfg, MonickerGenerator: generator}
+	cfg *config.Config, g common.MonickerGenerator,
+	svc *PlayerService, mgr *server.SessionManager) *AuxiliaryService {
+	return &AuxiliaryService{
+		MonickerGenerator: g,
+		Config:            cfg,
+		playerSvc:         svc,
+		sessMgr:           mgr,
+		start:             time.Now(),
+	}
 }
 
 func (s *AuxiliaryService) CollectServerStatus() *ServerStatus {
 	return &ServerStatus{
-		NumOnlinePlayers:  metrics.Server.OnlinePlayers().Value(),
-		NumTCPConnections: metrics.Server.TCPConnections().Value(),
-		NumUDPConnections: metrics.Server.UDPConnections().Value(),
+		ServerName:       s.Config.Server.Name,
+		Uptime:           time.Since(s.start),
+		NumOnlinePlayers: int32(s.playerSvc.Count()),
+		TotalConnections: int32(s.sessMgr.Count()),
 	}
 }
 
-func (s *AuxiliaryService) GatherRPCRateMetrics() map[string]string {
+func (s *AuxiliaryService) GatherOverallRPCRateMetrics() map[string]string {
+	t := metrics.RPC.OverallRpcRateTimer()
+	return map[string]string{
+		"requests":       fmt.Sprintf("%d", t.Count()),
+		"TPS (m1)":       fmt.Sprintf("%.1f", t.Rate1()),
+		"TPS (m5)":       fmt.Sprintf("%.1f", t.Rate5()),
+		"TPS (m15)":      fmt.Sprintf("%.1f", t.Rate15()),
+		"Latency (mean)": fmt.Sprintf("%.2fus", t.Mean()/1e3),
+		"Latency (p75)":  fmt.Sprintf("%.2fus", t.Percentile(75)/1e3),
+		"Latency (p90)":  fmt.Sprintf("%.2fus", t.Percentile(90)/1e3),
+		"Latency (p99)":  fmt.Sprintf("%.2fus", t.Percentile(99)/1e3),
+	}
+}
+
+func (s *AuxiliaryService) GatherAllRPCRateMetrics() map[string]string {
 	rpcRateMetrics := make(map[string]string)
 	metrics.RPC.IterateRateTimers(func(key string, t gometrics.Timer) {
 		// Samples count

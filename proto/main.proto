@@ -45,12 +45,10 @@ message InfoRequest {}
 
 message InfoResponse {
   string server_name = 1; // server name
-  int32 online_players = 2; // number of online players
-  int32 tcp_connections = 3; // number of TCP connections
-  int32 udp_connections = 4; // number of UDP connections
-  int32 max_player_capacity = 5; // max player capacity
-  int32 max_connection_capacity = 6; // max connection capacity
-  map<string, string> metrics = 7; // metrics status as key-value pairs
+  string uptime = 2; // server uptime
+  int32 online_players = 3; // number of online players
+  int32 total_connections = 4; // total number of network connections
+  map<string, string> metrics = 5; // metrics status as key-value pairs
 }
 
 // Generate random nickname

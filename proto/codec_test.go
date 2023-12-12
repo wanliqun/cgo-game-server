@@ -34,10 +34,9 @@ func TestCodecResponse(t *testing.T) {
 
 	{
 		msg, err := NewResponseMessage(&InfoResponse{
-			ServerName:            "cgo-game-server",
-			OnlinePlayers:         100,
-			MaxPlayerCapacity:     1000,
-			MaxConnectionCapacity: 10000,
+			ServerName:       "cgo-game-server",
+			OnlinePlayers:    100,
+			TotalConnections: 1000,
 		})
 		assert.NoError(t, err, "failed to new response message")
 

@@ -43,6 +43,7 @@ func NewApplication(configYaml string) (*Application, error) {
 		middlewares.Logger,
 		middlewares.MsgValidator,
 		middlewares.Authenticator(svcFactory.Player),
+		middlewares.Metrics,
 	)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to build middleware chain")

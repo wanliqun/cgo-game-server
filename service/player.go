@@ -80,6 +80,13 @@ func (s *PlayerService) GetBySession(sessionID string) *Player {
 	return s.sessPlayers[sessionID]
 }
 
+func (s *PlayerService) Count() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return len(s.usrPlayers)
+}
+
 func (s *PlayerService) Login(req *proto.LoginRequest, session *server.Session) (*Player, error) {
 	if req.Password != s.config.Server.Password {
 		return nil, errInvalidPassword

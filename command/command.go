@@ -64,19 +64,15 @@ func NewInfoCommand(axService *service.AuxiliaryService) *InfoCommand {
 }
 
 func (cmd *InfoCommand) Execute(ctx context.Context) (pbproto.Message, error) {
-	srvCfg := cmd.axService.Config.Server
 	srvStat := cmd.axService.CollectServerStatus()
-	rateMetrics := cmd.axService.GatherRPCRateMetrics()
+	rateMetrics := cmd.axService.GatherOverallRPCRateMetrics()
 
 	return &proto.InfoResponse{
-		ServerName:            srvCfg.Name,
-		MaxPlayerCapacity:     int32(srvCfg.MaxPlayerCapacity),
-		MaxConnectionCapacity: int32(srvCfg.MaxConnectionCapacity),
-
-		Metrics:        rateMetrics,
-		OnlinePlayers:  int32(srvStat.NumOnlinePlayers),
-		TcpConnections: int32(srvStat.NumTCPConnections),
-		UdpConnections: int32(srvStat.NumUDPConnections),
+		Metrics:          rateMetrics,
+		ServerName:       srvStat.ServerName,
+		Uptime:           srvStat.Uptime.String(),
+		OnlinePlayers:    srvStat.NumOnlinePlayers,
+		TotalConnections: srvStat.TotalConnections,
 	}, nil
 }
 

@@ -78,6 +78,13 @@ func (m *SessionManager) Add(sess *Session) {
 	m.sessions[sess.ID] = sess
 }
 
+func (m *SessionManager) Count() int {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	return len(m.sessions)
+}
+
 func (m *SessionManager) Terminate(sess *Session) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
