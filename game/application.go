@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
+	"github.com/wanliqun/cgo-game-server/cgo"
 	"github.com/wanliqun/cgo-game-server/command"
 	"github.com/wanliqun/cgo-game-server/common"
 	"github.com/wanliqun/cgo-game-server/config"
@@ -31,7 +32,14 @@ func NewApplication(configYaml string) (*Application, error) {
 		return nil, errors.WithMessage(err, "failed to init logger")
 	}
 
-	monickerGenerator := &common.GoFakerNameGenerator{}
+	var monickerGenerator common.MonickerGenerator
+	if cfg.CGO.Enabled {
+		cgo.Init(cfg.CGO.ResourceDir)
+		monickerGenerator = &cgo.CGOFakeNameGenerator{}
+	} else {
+		monickerGenerator = &common.GoFakerNameGenerator{}
+	}
+
 	sessionMgr := server.NewSessionManager()
 
 	svcFactory := service.NewFactory(cfg, sessionMgr, monickerGenerator)

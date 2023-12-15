@@ -6,12 +6,22 @@ import (
 )
 
 var (
+	useCGO = false
+
 	serverCmd = &cobra.Command{
 		Use:   "server",
 		Short: "Start game server",
 		Run:   runServer,
 	}
 )
+
+func init() {
+	serverCmd.Flags().BoolVarP(
+		&useCGO,
+		"cgo", "o", false,
+		"Use CGO monicker generator",
+	)
+}
 
 func runServer(*cobra.Command, []string) {
 	app, err := game.NewApplication(configYaml)

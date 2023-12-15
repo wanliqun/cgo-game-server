@@ -12,3 +12,8 @@
 #   # Available levels are `trace`, `debug`, `info`, `error` and `fatal` 
 #   level: info
 #   forceColor: false
+
+# CGO configurations
+# cgo:
+#   enabled: false
+#   resourceDir: ./resources

@@ -2,13 +2,15 @@
 SHELL := bash
 .DELETE_ON_ERROR:
 .SHELLFLAGS := -eu -o pipefail -c
-.DEFAULT_GOAL := all
+#.DEFAULT_GOAL := all
 MAKEFLAGS += --warn-undefined-variables
 MAKEFLAGS += --no-builtin-rules
 MAKEFLAGS += --no-print-directory
 BIN := .tmp/bin
-COPYRIGHT_YEARS := 2023
-LICENSE_IGNORE := -e submodules
+
+CXX_SOURCE_DIR = ./cgo/cpp
+CXX_INCLUDE_DIR = ./submodules/name-generator/dasmig
+
 # Set to use a different compiler. For example, `GO=go1.18rc1 make test`.
 GO ?= go
 ARGS ?=
@@ -68,3 +70,9 @@ $(BIN)/buf: $(BIN) Makefile
 
 $(BIN)/golangci-lint: $(BIN) Makefile
 	GOBIN=$(abspath $(@D)) $(GO) install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.53.3
+
+.PHONY: cgo
+cgo: ## Generate C++ dynamic link library
+	clang++ -o libnamegen.so $(CXX_SOURCE_DIR)/lib-bridge.cpp \
+		-I$(CXX_INCLUDE_DIR) \
+		-std=c++17 -O3 -Wall -Wextra -fPIC -shared

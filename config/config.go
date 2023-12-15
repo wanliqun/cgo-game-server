@@ -26,9 +26,15 @@ type ServerConfig struct {
 	MaxConnectionCapacity int    `default:"15000"`
 }
 
+type CGOConfig struct {
+	Enabled     bool   `default:":false"`
+	ResourceDir string `default:"./resources"`
+}
+
 type Config struct {
 	Log    LogConfig
 	Server ServerConfig
+	CGO    CGOConfig
 }
 
 func NewConfig(configYaml string) (*Config, error) {

@@ -8,10 +8,10 @@ import (
 	"github.com/go-faker/faker/v4/pkg/options"
 )
 
-type Sex = int32
+type Gender = int32
 
 const (
-	Male Sex = iota
+	Male Gender = iota
 	Female
 )
 
@@ -43,12 +43,12 @@ const (
 )
 
 type MonickerGenerator interface {
-	Generate(Sex, Culture) string
+	Generate(Gender, Culture) string
 }
 
 type GoFakerNameGenerator struct{}
 
-func (g *GoFakerNameGenerator) Generate(sex Sex, culture Culture) string {
+func (g *GoFakerNameGenerator) Generate(sex Gender, culture Culture) string {
 	var opt options.OptionFunc
 	switch culture {
 	case RUSSIAN:
