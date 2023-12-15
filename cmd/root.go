@@ -26,6 +26,7 @@ func init() {
 
 	rootCmd.AddCommand(serverCmd)
 	rootCmd.AddCommand(simulatorCmd)
+	rootCmd.AddCommand(loadRunnerCmd)
 }
 
 func Execute() {
