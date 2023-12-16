@@ -22,6 +22,7 @@ type ServerConfig struct {
 	Password              string `default:"helloworld"`
 	TCPEndpoint           string `default:":8765"`
 	UDPEndpoint           string `default:":8765"`
+	HTTPEndpoint          string `default:":8787"`
 	MaxPlayerCapacity     int    `default:"10000"`
 	MaxConnectionCapacity int    `default:"15000"`
 }

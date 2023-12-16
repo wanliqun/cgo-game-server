@@ -54,10 +54,10 @@ func (s *AuxiliaryService) GatherOverallRPCRateMetrics() map[string]string {
 		"TPS (m1)":       fmt.Sprintf("%.1f", t.Rate1()),
 		"TPS (m5)":       fmt.Sprintf("%.1f", t.Rate5()),
 		"TPS (m15)":      fmt.Sprintf("%.1f", t.Rate15()),
-		"Latency (mean)": fmt.Sprintf("%.2fus", t.Mean()/1e3),
-		"Latency (p75)":  fmt.Sprintf("%.2fus", t.Percentile(75)/1e3),
-		"Latency (p90)":  fmt.Sprintf("%.2fus", t.Percentile(90)/1e3),
-		"Latency (p99)":  fmt.Sprintf("%.2fus", t.Percentile(99)/1e3),
+		"Latency (mean)": fmt.Sprintf("%.1fms", t.Mean()/1e6),
+		"Latency (p75)":  fmt.Sprintf("%.1fms", t.Percentile(0.75)/1e6),
+		"Latency (p90)":  fmt.Sprintf("%.1fms", t.Percentile(0.90)/1e6),
+		"Latency (p99)":  fmt.Sprintf("%.1fms", t.Percentile(0.99)/1e6),
 	}
 }
 
@@ -70,28 +70,28 @@ func (s *AuxiliaryService) GatherAllRPCRateMetrics() map[string]string {
 
 		// TPS
 		m1Tps := fmt.Sprintf("%s m1 TPS", key)
-		rpcRateMetrics[m1Tps] = fmt.Sprintf("%.2f", t.Rate1())
+		rpcRateMetrics[m1Tps] = fmt.Sprintf("%.1f", t.Rate1())
 		m5Tps := fmt.Sprintf("%s m5 TPS", key)
-		rpcRateMetrics[m5Tps] = fmt.Sprintf("%.2f", t.Rate5())
+		rpcRateMetrics[m5Tps] = fmt.Sprintf("%.1f", t.Rate5())
 		m15Tps := fmt.Sprintf("%s m15 TPS", key)
-		rpcRateMetrics[m15Tps] = fmt.Sprintf("%.2f", t.Rate15())
+		rpcRateMetrics[m15Tps] = fmt.Sprintf("%.1f", t.Rate15())
 
 		// Latency
 		minLatency := fmt.Sprintf("%s Min Latency", key)
-		rpcRateMetrics[minLatency] = fmt.Sprintf("%v", t.Min())
+		rpcRateMetrics[minLatency] = fmt.Sprintf("%.1f(ms)", float64(t.Min())/1e6)
 		meanLatency := fmt.Sprintf("%s Mean Latency", key)
-		rpcRateMetrics[meanLatency] = fmt.Sprintf("%.2f", t.Mean())
+		rpcRateMetrics[meanLatency] = fmt.Sprintf("%.1f(ms)", t.Mean()/1e6)
 		maxLatency := fmt.Sprintf("%s Max Latency", key)
-		rpcRateMetrics[maxLatency] = fmt.Sprintf("%v", t.Max())
+		rpcRateMetrics[maxLatency] = fmt.Sprintf("%1f(ms)", float64(t.Max())/1e6)
 
 		p50Latency := fmt.Sprintf("%s p50 Latency", key)
-		rpcRateMetrics[p50Latency] = fmt.Sprintf("%.2f", t.Percentile(50))
+		rpcRateMetrics[p50Latency] = fmt.Sprintf("%.1f(ms)", t.Percentile(0.5)/1e6)
 		p75Latency := fmt.Sprintf("%s p75 Latency", key)
-		rpcRateMetrics[p75Latency] = fmt.Sprintf("%.2f", t.Percentile(75))
+		rpcRateMetrics[p75Latency] = fmt.Sprintf("%.1f(ms)", t.Percentile(0.75)/1e6)
 		p90Latency := fmt.Sprintf("%s p90 Latency", key)
-		rpcRateMetrics[p90Latency] = fmt.Sprintf("%.2f", t.Percentile(90))
+		rpcRateMetrics[p90Latency] = fmt.Sprintf("%.1f(ms)", t.Percentile(0.90)/1e6)
 		p99Latency := fmt.Sprintf("%s p99 Latency", key)
-		rpcRateMetrics[p99Latency] = fmt.Sprintf("%.2f", t.Percentile(99))
+		rpcRateMetrics[p99Latency] = fmt.Sprintf("%.1f(ms)", t.Percentile(0.99)/1e6)
 	})
 
 	return rpcRateMetrics

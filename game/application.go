@@ -10,6 +10,7 @@ import (
 	"github.com/wanliqun/cgo-game-server/config"
 	"github.com/wanliqun/cgo-game-server/middlewares"
 	"github.com/wanliqun/cgo-game-server/proto"
+	"github.com/wanliqun/cgo-game-server/rest"
 	"github.com/wanliqun/cgo-game-server/server"
 	"github.com/wanliqun/cgo-game-server/service"
 	"github.com/wanliqun/cgo-game-server/util"
@@ -20,6 +21,7 @@ type Application struct {
 	sessionMgr *server.SessionManager
 	udpServer  *server.Server
 	tcpServer  *server.Server
+	restServer *rest.Server
 }
 
 func NewApplication(configYaml string) (*Application, error) {
@@ -70,11 +72,17 @@ func NewApplication(configYaml string) (*Application, error) {
 		return nil, errors.WithMessage(err, "failed to new TCP server")
 	}
 
+	restServer, err := rest.NewServer(cfg.Server.HTTPEndpoint, svcFactory)
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to new RESTful server")
+	}
+
 	return &Application{
 		conf:       cfg,
 		sessionMgr: sessionMgr,
 		udpServer:  udpServer,
 		tcpServer:  tcpServer,
+		restServer: restServer,
 	}, nil
 }
 
@@ -82,6 +90,7 @@ func (app *Application) Run() {
 	go app.sessionMgr.Start()
 	go app.udpServer.Serve()
 	go app.tcpServer.Serve()
+	go app.restServer.Serve()
 
 	util.GracefulShutdown(&sync.WaitGroup{}, app.Close)
 }
@@ -90,4 +99,5 @@ func (app *Application) Close() {
 	app.sessionMgr.Stop()
 	app.udpServer.Close()
 	app.tcpServer.Close()
+	app.restServer.Close()
 }
