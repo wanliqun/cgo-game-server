@@ -24,8 +24,8 @@ type Application struct {
 	restServer *rest.Server
 }
 
-func NewApplication(configYaml string) (*Application, error) {
-	cfg, err := config.NewConfig(configYaml)
+func NewApplication() (*Application, error) {
+	cfg, err := config.NewConfigFromKoanf()
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to load config")
 	}

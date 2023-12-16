@@ -8,8 +8,16 @@ import (
 	"github.com/wanliqun/cgo-game-server/stress"
 )
 
+type loadRunnerOption struct {
+	*stress.ScheduleOption
+	srvAddr string
+	useUDP  bool
+}
+
 var (
-	option stress.ScheduleOption
+	option = loadRunnerOption{
+		ScheduleOption: &stress.ScheduleOption{},
+	}
 
 	loadRunnerCmd = &cobra.Command{
 		Use:   "loadrunner",
@@ -40,14 +48,29 @@ func init() {
 		&option.Timeout,
 		"duration", "d", time.Minute, "Duration to produce TPS",
 	)
+
+	loadRunnerCmd.Flags().StringVarP(
+		&option.srvAddr,
+		"server-address", "s", "127.0.0.1:8765",
+		"The address of server to be tested",
+	)
+
+	loadRunnerCmd.Flags().BoolVarP(
+		&option.useUDP,
+		"use-udp", "u", false,
+		"Use UDP protocol to connect server",
+	)
 }
 
 func runLoadTest(cmd *cobra.Command, args []string) {
 	option.ClientFactory = func() *client.Client {
-		//return client.NewTCPClient("127.0.0.1:8765")
-		return client.NewUDPClient("192.168.2.152:8765")
+		if option.useUDP {
+			return client.NewUDPClient(option.srvAddr)
+		}
+
+		return client.NewTCPClient(option.srvAddr)
 	}
 
-	scheduler := stress.NewScheduler(option)
+	scheduler := stress.NewScheduler(*option.ScheduleOption)
 	scheduler.ProduceTPS(&stress.SimpleTask{})
 }

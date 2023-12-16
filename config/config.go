@@ -1,15 +1,24 @@
 package config
 
 import (
+	"os"
 	"strings"
 
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/env"
 	"github.com/knadh/koanf/providers/file"
+	"github.com/knadh/koanf/providers/posflag"
 	"github.com/knadh/koanf/v2"
 	"github.com/mcuadros/go-defaults"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/pflag"
+)
+
+var (
+	sharedK *koanf.Koanf
+
+	defaultConfigSearchPaths = []string{"config.yml", "config/config.yml"}
 )
 
 type LogConfig struct {
@@ -38,29 +47,66 @@ type Config struct {
 	CGO    CGOConfig
 }
 
-func NewConfig(configYaml string) (*Config, error) {
-	k := koanf.New(".")
+func init() {
+	sharedK = koanf.New(".")
+}
 
-	// Load YAML config.
-	if err := k.Load(file.Provider(configYaml), yaml.Parser()); err != nil {
-		return nil, err
-	}
-
-	// Read system enviroment variables prefixed with "CGS".
-	// eg., `CGS_LOG_LEVEL` will override "log.level" config item from the config file.
-	k.Load(env.Provider("CGS_", ".", func(s string) string {
-		return strings.Replace(strings.ToLower(
-			strings.TrimPrefix(s, "CGS_")), "_", ".", -1)
-	}), nil)
-
+func NewConfigFromKoanf() (*Config, error) {
 	cfg := new(Config)
 	defaults.SetDefaults(cfg)
 
-	if err := k.Unmarshal("", &cfg); err != nil {
+	if err := sharedK.Unmarshal("", &cfg); err != nil {
 		return nil, errors.WithMessage(err, "failed to unmarshal config")
 	}
 
 	return cfg, nil
+}
+
+func InitKoanf(configYaml string, flag *pflag.FlagSet) error {
+	if err := InitKoanfFromFile(configYaml); err != nil {
+		return err
+	}
+
+	if err := InitKoanfFromEnv(); err != nil {
+		return err
+	}
+
+	return InitKoanfFromPflag(flag)
+}
+
+func InitKoanfFromFile(configYaml string) (err error) {
+	if len(configYaml) > 0 {
+		// Load YAML config.
+		return sharedK.Load(file.Provider(configYaml), yaml.Parser())
+	}
+
+	// We also define some default search path if user doesn't provide some.
+	for _, cpath := range defaultConfigSearchPaths {
+		err = sharedK.Load(file.Provider(cpath), yaml.Parser())
+		if err == nil {
+			logrus.WithField("configYaml", cpath).Info("Used default config file")
+			return nil
+		}
+
+		if !errors.Is(err, os.ErrNotExist) {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func InitKoanfFromEnv() error {
+	// Read system enviroment variables prefixed with "CGS".
+	// eg., `CGS_LOG_LEVEL` will override "log.level" config item from the config file.
+	return sharedK.Load(env.Provider("CGS_", ".", func(s string) string {
+		return strings.Replace(strings.ToLower(
+			strings.TrimPrefix(s, "CGS_")), "_", ".", -1)
+	}), nil)
+}
+
+func InitKoanfFromPflag(flag *pflag.FlagSet) error {
+	return sharedK.Load(posflag.Provider(flag, ".", sharedK), nil)
 }
 
 func InitLogger(cfg *LogConfig) error {

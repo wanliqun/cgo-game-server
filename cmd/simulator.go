@@ -2,25 +2,29 @@ package cmd
 
 import (
 	"log"
+	"math/rand"
+	"time"
 
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/wanliqun/cgo-game-server/client"
 	"github.com/wanliqun/cgo-game-server/common"
+	"github.com/wanliqun/cgo-game-server/config"
 	"github.com/wanliqun/cgo-game-server/proto"
 )
 
-const (
-	srvAddr  = "127.0.0.1:8765"
-	username = "kokko"
-	password = "helloworld"
-	sex      = common.Male
-	culture  = common.CHINESE
-)
+type simulatorOption struct {
+	srvAddr  string
+	userName string
+	password string
+}
 
 var (
+	rnd     *rand.Rand
+	simOpts simulatorOption
+	verbose bool
+
 	simulatorCmd = &cobra.Command{
 		Use:   "simulator",
 		Short: "Simulates a game client to interact with server",
@@ -28,11 +32,42 @@ var (
 	}
 )
 
-func runSimulator(*cobra.Command, []string) {
-	logrus.SetLevel(logrus.DebugLevel)
-	logrus.SetFormatter(&logrus.TextFormatter{ForceColors: true, FullTimestamp: true})
+func init() {
+	rnd = rand.New(rand.NewSource(time.Now().UnixNano()))
 
-	gc, err := chooseGameClient(srvAddr)
+	simulatorCmd.Flags().StringVarP(
+		&simOpts.srvAddr,
+		"server-address", "s", "127.0.0.1:8765",
+		"The server address this simulator connects to",
+	)
+
+	simulatorCmd.Flags().StringVarP(
+		&simOpts.userName,
+		"username", "u", "wanliqun",
+		"The username used to login in the server",
+	)
+
+	simulatorCmd.Flags().StringVarP(
+		&simOpts.password,
+		"password", "p", "helloworld",
+		"The password used to login in the server",
+	)
+
+	simulatorCmd.Flags().BoolVarP(
+		&verbose,
+		"verbose", "v", false,
+		"Output debug log to the console",
+	)
+}
+
+func runSimulator(*cobra.Command, []string) {
+	if verbose {
+		config.InitLogger(&config.LogConfig{
+			Level: "debug", ForceColor: true,
+		})
+	}
+
+	gc, err := chooseGameClient(simOpts.srvAddr)
 	if err != nil {
 		log.Fatalln("New game client error:", err)
 	}
@@ -71,11 +106,13 @@ func simulateGamePlay(gc *client.Client) (err error) {
 		case 0: // info
 			err = gc.Info()
 		case 1: // login
-			err = gc.Login(username, password)
+			err = gc.Login(simOpts.userName, simOpts.password)
 		case 2: // logout
 			err = gc.Logout()
 		case 3: // generate random nickname
-			err = gc.GenerateRandomNickname(sex, culture)
+			gender := common.Gender(rnd.Int() % 2)
+			culture := common.Culture(rnd.Int() % 22)
+			err = gc.GenerateRandomNickname(gender, culture)
 		case 4: // quit
 			return nil
 		}

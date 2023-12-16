@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
+	"github.com/wanliqun/cgo-game-server/config"
 )
 
 var (
@@ -14,11 +15,14 @@ var (
 		Use:   "cgo-game-server [--config | -c]",
 		Short: "A demo high performance CGO game server.",
 		Run:   run,
+		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			return config.InitKoanf(configYaml, cmd.Flags())
+		},
 	}
 )
 
 func init() {
-	rootCmd.Flags().StringVarP(
+	rootCmd.PersistentFlags().StringVarP(
 		&configYaml,
 		"config", "c", "config/config.yml",
 		"YAML config file path to load",
