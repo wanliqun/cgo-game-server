@@ -104,6 +104,8 @@ func (s *PlayerService) Login(req *proto.LoginRequest, session *server.Session) 
 		s.Kickoff(player)
 	}
 
+	// TODO: Enforce max player capacity in case of server overload.
+
 	player = &Player{
 		Username: req.Username,
 		Session:  session,

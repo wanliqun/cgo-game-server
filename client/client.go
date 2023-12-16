@@ -37,6 +37,9 @@ func makeUDPDialer(addr string) dialer {
 
 // Client interacts with the game server, including establishing connection
 // to server, reading data from server and writing data to server etc.
+//
+// TODO: Add heartbeating mechanism (eg., ping/pong) so that client can
+// detect connection disruption especially for UDP protocol.
 type Client struct {
 	dialer dialer
 	codec  proto.Codec
@@ -164,6 +167,7 @@ func (c *Client) write(ctx context.Context, conn net.Conn) {
 }
 
 func (c *Client) reconnect(ctx context.Context) (conn net.Conn, err error) {
+	// TODO: Use exponetial backoff for retry mechanism.
 	timer := time.NewTimer(defaultReconnectInterval)
 	defer timer.Stop()
 

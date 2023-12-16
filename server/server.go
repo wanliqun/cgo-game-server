@@ -70,6 +70,7 @@ func (srv *Server) Serve() error {
 
 	defer srv.listener.Close()
 	for {
+		// TODO: Enforce max connections capacity in case of server overload.
 		conn, err := srv.listener.Accept()
 		if err == nil {
 			go srv.Handle(srv.listener, conn)
