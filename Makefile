@@ -10,6 +10,7 @@ BIN := .tmp/bin
 
 CXX_SOURCE_DIR = ./cgo/cpp
 CXX_INCLUDE_DIR = ./submodules/name-generator/dasmig
+CXX_OUTPUT_LIB_DIR = /usr/local/lib
 
 # Set to use a different compiler. For example, `GO=go1.18rc1 make test`.
 GO ?= go
@@ -25,7 +26,7 @@ clean: ## Delete intermediate build artifacts
 	git clean -Xdf
 
 .PHONY: test
-test: generate ## Run all unit tests
+test: generate cgo ## Run all unit tests
 	$(GO) test -race -cover ./...
 
 .PHONY: lint
@@ -73,6 +74,6 @@ $(BIN)/golangci-lint: $(BIN) Makefile
 
 .PHONY: cgo
 cgo: ## Generate C++ dynamic link library
-	clang++ -o libnamegen.so $(CXX_SOURCE_DIR)/lib-bridge.cpp \
+	clang++ -o $(CXX_OUTPUT_LIB_DIR)/libnamegen.so $(CXX_SOURCE_DIR)/lib-bridge.cpp \
 		-I$(CXX_INCLUDE_DIR) \
 		-std=c++17 -O3 -Wall -Wextra -fPIC -shared
