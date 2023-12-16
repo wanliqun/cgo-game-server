@@ -48,7 +48,7 @@ message InfoResponse {
   string uptime = 2; // server uptime
   int32 online_players = 3; // number of online players
   int32 total_connections = 4; // total number of network connections
-  map<string, string> metrics = 5; // metrics status as key-value pairs
+  map<string, string> metrics = 5; // overall metrics as key-value pairs
 }
 
 // Generate random nickname

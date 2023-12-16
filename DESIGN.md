@@ -21,7 +21,7 @@ The game server utilizes the protobuf serialization protocol to exchange data wi
 |INFO|Retrieves server information, including running status etc.|
 |LOGIN|Logs the player into the game server.|
 |LOGOUT|Logs the player off the game server.|
-|GENERATE_RANDOM_NICKNAME|Generates a random nickname based on the specified sex and culture.|
+|GENERATE_RANDOM_NICKNAME|Generates a random nickname based on specified gender and culture.|
 
 ## Assumptions and Constraints
 
@@ -71,7 +71,7 @@ Generate stub objects to call methods from the C++ dynamic link library, which w
 Establishes TCP/UDP connection to the remote server and handles connection lifecycle.
 
 - Reconnection Mechanism
-Implements an exponential backoff retry mechanism to automatically reconnect to the server in case of connection loss or abnormal conditions.
+Implements a retry mechanism to automatically reconnect to the server in case of connection loss or abnormal conditions.
 
 - API Interface
 Provides a wrapped API interface that abstracts away the underlying network communication and error handling, allowing users to interact with the server in a straightforward manner.
@@ -102,7 +102,7 @@ Optimize the system for performance to minimize latency and maximize throughput.
 Implement mechanisms to ensure the reliability of the system, including fault tolerance and disaster recovery.
 
 - Persistence
-Persist the counter and set data to a database so that they are not lost when the server is restarted.
+Persist data to a database so that they are not lost when the server is restarted.
 
 - Testing
 Employ more comprehensive testing strategy such as unit testing, integration testing and load testing for more robustness and reliability.
@@ -115,43 +115,6 @@ Implement comprehensive logging and monitoring mechanisms to track system activi
 ### Protobuf Definition
 
 ```protobuf
-enum Sex {
-  MALE = 0;
-  FEMALE = 1;
-}
-
-enum Culture {
-  AMERICAN = 0;
-  ARGENTINIAN = 1;
-  AUSTRALIAN = 2;
-  BRAZILIAN = 3;
-  BRITISH = 4;
-  BULGARIAN = 5;
-  CANADIAN = 6; 
-  CHINESE = 7;
-  DANISH = 8;
-  FINNISH = 9;
-  FRENCH = 10;
-  GERMAN = 11;
-  KAZAKH = 12;
-  MEXICAN = 13;
-  NORWEGIAN = 14;
-  POLISH = 15;
-  PORTUGUESE = 16;
-  RUSSIAN = 17;
-  SPANISH = 18;
-  SWEDISH = 19;
-  TURKISH = 20;
-  UKRAINIAN = 21;
-}
-
-enum StatusCode {
-  OK = 0;
-  UNKNOWN_ERROR = 1;
-  INVALID_PARAMETER = 2;
-  RESOURCE_NOT_FOUND = 3;
-  PERMISSION_DENIED = 4;
-}
 
 // The message type enum
 enum MessageType {
@@ -161,72 +124,40 @@ enum MessageType {
   GENERATE_RANDOM_NICKNAME = 3; // GENERATE_RANDOM_NICKNAME command
 }
 
-// Define the main request and response messages
-
+// Login in
 message LoginRequest {
-  optional string username = 1;
-  optional string password = 2;
+  string username = 1;
+  string password = 2;
 }
-
 message LoginResponse { }
 
+// Log out
 message LogoutRequest {}
-
 message LogoutResponse { }
 
+// Info
 message InfoRequest {}
-
 message InfoResponse {
-  optional string server_name = 1; // server name
-  optional int32 num_online_players = 2; // number of online players
-  optional int32 max_player_capacity = 3; // max player capacity
-  optional int32 max_connection_capacity = 4; // max connection capacity
-  map<string, string> metrics = 5; // metrics status as key-value pairs
+  string server_name = 1; // server name
+  string uptime = 2; // server uptime
+  int32 online_players = 3; // number of online players
+  int32 total_connections = 4; // total number of network connections
+  map<string, string> metrics = 5; // overall metrics as key-value pairs
 }
 
+// Generate random nickname
 message GenerateRandomNicknameRequest {
-  optional Sex sex = 1; // Sex
-  optional Culture culture = 2; // Culture
+  int32 sex = 1; // Sex
+  int32 culture = 2; // Culture
 }
-
 message GenerateRandomNicknameResponse {
-  optional string nickname = 1; // Nickname
-}
-
-// Message for encapsulating different request types
-message Request {
-  MessageType type = 1;
-  oneof body {
-    InfoRequest info = 2;
-    LoginRequest login = 3;
-    LogoutRequest logout = 4;
-    GenerateRandomNicknameRequest generate_random_nickname = 5;
-  }
+  string nickname = 1; // Nickname
 }
 
 // Message for conveying response status information
 message Status {
-  StatusCode code = 1; // Status code
-  optional string message = 2; // Descriptive message
-}
-
-// Message for encapsulating different response types
-message Response {
-  MessageType type = 1;
-  oneof body {
-    Status status = 2;
-    InfoResponse info = 3;
-    LoginResponse login = 4;
-    LogoutResponse logout = 5;
-    GenerateRandomNicknameResponse generate_random_nickname = 6;
-  }
-}
-
-message Message {
-  oneof body {
-    Request request = 1;
-    Response response = 2;
-  }
+  int32 code = 1; // Status code
+  string message = 2; // Descriptive message
 }
 ```
 
@@ -234,7 +165,10 @@ message Message {
 
 ```go
 type Application struct {
-    tcpServer, udpServer *server.Server
+  sessionMgr *server.SessionManager
+  udpServer  *server.Server
+  tcpServer  *server.Server
+  restServer *rest.Server
 }
 
 func (app *Application) Run() {...}
@@ -244,52 +178,46 @@ func (app *Application) Close() {...}
 ### Server
 
 ```go
-// HandlerFunc type
-type HandlerFunc func(context.Cotnext, *proto.Request) *proto.Response
-
 type Server struct {
-    codec Codec
-    listener net.Listener
-    msgHandler HandlerFunc
-    sessionMgr *SessionManager
+  *ConnectionHandler              // Connection handler
+  listener           net.Listener // Net listener
+  status             atomic.Int32 // Server status
 }
 
-func NewServer(
-    protoType ProtocolType, codec Codec, 
-    sessionMgr *SessionManager,  msgHandler HandlerFunc, 
-) (*Server, errror) { ... }
-
-func (s *Server) Start() error { ... }
-func (s *Server) Stop() error { ... }
+func NewTCPServer(addr string, ch *ConnectionHandler) (srv *Server, err error) {...}
+func NewUDPServer(addr string, ch *ConnectionHandler) (srv *Server, err error) {...}
+func (srv *Server) Serve() error {...}
+func (srv *Server) Close() error {...}
 ```
 
 ### Codec
 
 ```go
-// Codec serializes and deserializes data between protocol message and 
-// underlying network package. 
-type Codec interface {
-    Encode(*proto.Message}) ([]byte, error)
-    Decode([]byte) (*proto.Message, error)
-}
+type Codec struct {}
+func (c *Codec) Encode(msg *Message, w io.Writer) error {...}
+func (c *Codec) Decode(r io.Reader) (*Message, error){...}
 ```
 
 ### SessionManager
 
 ```go
 type Session struct {
-    Conn net.conn
-    SessionID string
-    LastActive time.Time
+  ID         string   // Session ID
+  Conn       net.Conn // Underlying network connection
+  lastActive int64    // Last active timestamp
 }
 
+func (s *Session) Refresh() { ... }
+func (s *Session) Close() { ... }
+
 type SessionManager struct {
-    sessions map[string]*Session // Session ID => Session Object
+  sessions map[string]*Session // Session ID => Session Object
 }
 
 func (m *SessionManager) Add(s *Session) {...}
-func (m *SessionManager) Remove(s *Session) {...}
-func (m *SessionManager) CloseAll() { ... }
+func (m *SessionManager) Count() int {...}
+func (m *SessionManager) Terminate(sess *Session) error {...}
+func (m *SessionManager) TerminateAll(ctx context.Context) error { ... }
 func (m *SessionManager) Start() { ... }
 func (m *SessionManager) Stop() { ... }
 ```
@@ -297,102 +225,114 @@ func (m *SessionManager) Stop() { ... }
 ### Middlewares
 
 ```go
-type MiddlewareFunc func(HandlerFunc) HandlerFunc
-func MiddlewareChain(middlewares ...MiddlewareFunc) HandlerFunc { ... }
+type MiddlewareFunc func(server.HandlerFunc) server.HandlerFunc
+func MiddlewareChain(handler server.HandlerFunc, middlewares ...MiddlewareFunc) (server.HandlerFunc, error) {...}
 
-func PanicRecover(HandlerFunc) HandlerFunc {...}
-func Authenticater(HandlerFunc) HandlerFunc {...}
-func Logger(HandlerFunc) HandlerFunc {...}
-func Validator(next HandlerFunc) HandlerFunc { ... }
-func MetricsGather(next HandlerFunc) HandlerFunc { ... }
-func CommandExecutor(next HandlerFunc) HandlerFunc { ... }
+func PanicRecover(next server.HandlerFunc) server.HandlerFunc {...}
+func MsgValidator(next server.HandlerFunc) server.HandlerFunc {...}
+func Logger(next server.HandlerFunc) server.HandlerFunc {...}
+func Authenticator(s *service.PlayerService) MiddlewareFunc { ... }
+func Metrics(next server.HandlerFunc) server.HandlerFunc  { ... }
 ```
 
 ### Service
 
 ```go
 type Player struct {
-    Username string
-    Session *Session
+  Username string
+  Session *Session
 }
 
 type PlayerService struct {
-    userPlayers map[string]*Player // username => *Player
-    sessionPlayers map[string]*Player // session => *Player
+  mu          sync.Mutex
+  config      *config.Config
+  usrPlayers  map[string]*Player // username=>Player
+  sessPlayers map[string]*Player // session=>Player
+  sessionMgr  *server.SessionManager
 }
 
-// Event handler for session termination event.
-func (s *PlayerService) OnSessionTerminatedEvent(e *SessionTerminatedEvent) { ... }
-
 func (s *PlayerService) Add(p *Player) { ... }
-func (s *PlayerService) Remove(p *Player) { ... }
+func (s *PlayerService) Kickoff(p *Player) {...}
 func (s *PlayerService) GetByUser(username string) *Player { ... }
-func (s *PlayerService) GetBySession(session *Session) *Player { ... }
+func (s *PlayerService) GetBySession(sessionID string) *Player { ... }
+func (s *PlayerService) Login(req *proto.LoginRequest, session *server.Session) (*Player, error) {...}
+func (s *PlayerService) OnSessionTerminatedEvent(e *SessionTerminatedEvent) { ... }
 ```
 
 ### Command
 
 ```go
-type CommandFactory struct {}
-func (f *CommandFactory) CreateCommand (msg *Message) (any, error){ ... }
-
 type Command interface {
-    Execute(ctx context.Context) (any, error)
+  Execute(context.Context) (pbproto.Message, error)
 }
+
+type Executor struct {
+  svcFactory *service.Factory
+}
+
+func (e *Executor) Execute(ctx context.Context, msg *server.Message) *server.Message { ... }
 ```
 
 ### Client
 
 ```go
 type Client struct {
-    codec Codec
-    conn net.Conn
-    dialer func(endpoint string) (net.Conn, error)
+  dialer func() (net.Conn, error)
+  codec  proto.Codec
+  conn  net.Conn
+  ...
 }
 
-func NewClient(protoType ProtocolType, endpoint string, codec Codec) (*Client, error)
-func (c *Client) Close() error { ... }
+func NewTCPClient(addr string) *Client {...}
+func NewUDPClient(addr string) *Client {...}
 
-func (c *Client) Info() (*proto.InfoResponse, error)
-func (c *Client) Login(username, password string) (*proto.LoginResponse, error)
-func (c *Client) Logout() (*proto.LogoutResponse, error)
-func (c *Client) GenerateRandomNickname(sex, culture int) (*GenerateRandomNicknameResponse, error)
+func (c *Client) Connect() error {...}
+func (c *Client) Close() {...}
+
+type OnMessageCallback func(msg *proto.Message)
+func (c *Client) OnMessage(cb OnMessageCallback) {...}
+
+func (c *Client) Info() error {...}
+func (c *Client) Login(username, password string) error {...}
+func (c *Client) Logout() error {...}
+func (c *Client) GenerateRandomNickname(sex, culture int32) error {...}
 ```
 
 ### Auxillary Types
 
 ```go
-// Config represents the configuration parameters for the game server.
+type LogConfig struct {
+  Level      string `default:"info"`
+  ForceColor bool   `default:"true"`
+}
+
+type ServerConfig struct {
+  Name                  string `default:"cgo_game_server"`
+  Password              string `default:"helloworld"`
+  TCPEndpoint           string `default:":8765"`
+  UDPEndpoint           string `default:":8765"`
+  HTTPEndpoint          string `default:":8787"`
+  MaxPlayerCapacity     int    `default:"10000"`
+  MaxConnectionCapacity int    `default:"15000"`
+}
+
+type CGOConfig struct {
+  Enabled     bool   `default:":false"`
+  ResourceDir string `default:"./resources"`
+}
+
 type Config struct {
-    // ServerName is the name of the game server.
-    ServerName string
-    // ServerPassword is the password required to connect to the server.
-    ServerPassword string
-    // TCPEndpoint is the TCP endpoint on which the server listens.
-    TCPEndpoint string
-    // UDPEndpoint is the UDP endpoint on which the server listens.
-    UDPEndpoint string
-    // MaxPlayerCapacity is the maximum number of players that the server
-    // can accommodate simultaneously.
-    MaxPlayerCapacity int
-    // MaxConnectionCapacity is the maximum number of concurrent connections
-    // that the server can handle.
-    MaxConnectionCapacity int
-    // LogLevel is the logging level for the server. 
-    // Valid values are "debug", "info", "warning", "error", and "fatal".
-    LogLevel string
+  Log    LogConfig
+  Server ServerConfig
+  CGO    CGOConfig
 }
 ```
 
 ### Metrics
 
-- Gauges
-	- `concurrent_players`: Measures the number of players currently connected in the game. 
-	- `connected_tcp_connections`: Measures the number of established TCP connections to the game server. 
-	- `connected_udp_connections`: Measures the number of established UDP connections to the game server. 
-
-- Timers
-	- `overall_qps`: Measures the overall query per second (QPS) rate across all commands processed by the server.
-	- `overall_latency`: Measures the overall latency distribution for all commands processed by the server.
-	- `generate_random_nickname_qps`: Measures the QPS rate specifically for the `GENERATE_RANDOM_NICKNAME` command. 
-	- `generate_random_nickname_latency`: Measures the latency distribution for the `GENERATE_RANDOM_NICKNAME` command. 
+- `rpc.rate.overall`
+  - Measures the overall query per second (QPS) rate across all commands processed by the server.
+  - Measures the overall latency distribution for all commands processed by the server.
+- `rpc.rate.${command}.[success|error]`
+  - Measures the QPS rate specifically for the RPC command. 
+  - Measures the latency distribution for the RPC command. 
